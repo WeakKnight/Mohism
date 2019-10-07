@@ -20,6 +20,9 @@ project "mohism"
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
     objdir ("intermediate/" .. outputdir .. "/%{prj.name}")
 
+    pchheader "../mohism/pch.h"
+    pchsource "../mohism/pch.cpp"
+
     files
     {
         "mohism/**.h",
