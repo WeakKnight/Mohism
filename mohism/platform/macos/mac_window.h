@@ -6,7 +6,7 @@
 
 namespace MH
 {
-    	class MacWindow : public Window
+    class MacWindow : public Window
 	{
 	public:
 		MacWindow(const WindowProps& props);

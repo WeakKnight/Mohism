@@ -12,6 +12,8 @@ public:
     virtual ~Application();
     void run();
 
+    void on_event(Event& e);
+    
 private:
     std::unique_ptr<Window> m_window;
     bool is_running = true;
