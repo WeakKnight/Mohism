@@ -22,7 +22,7 @@ class TestLayer: public MH::Layer
 class Sandbox: public MH::Application
 {
 public:
-    Sandbox(/* args */)
+    Sandbox()
     {
         push_layer(new TestLayer());
     }
@@ -31,7 +31,6 @@ public:
 
     }
 private:
-    /* data */
 };
 
 MH::Application* MH::create_application()

@@ -13,6 +13,7 @@ workspace "mohism"
 outputdir = "%{cfg.system}-%{cfg.buildcfg}"
 
 include "3rdparty/glfw"
+include "3rdparty/glad"
 
 project "mohism"
     location "build"
@@ -35,6 +36,7 @@ project "mohism"
     {
         "3rdparty/spdlog/include",
         "3rdparty/glfw/include",
+        "3rdparty/glad/include",
         "mohism/"
     }
 
@@ -46,12 +48,14 @@ project "mohism"
         defines
         {
             "MH_PLATFORM_MACOS",
+            "GLFW_INCLUDE_NONE"
         }
 
         links 
         {
             --"libiconv",
             "glfw",
+            "glad",
             "ForceFeedback.framework",
             "AudioToolbox.framework",
             "CoreAudio.framework",

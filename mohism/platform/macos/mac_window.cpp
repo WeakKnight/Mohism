@@ -4,6 +4,9 @@
 #include "events/mouse_event.h"
 #include "core/log.h"
 
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
+
 namespace MH
 {
     static bool s_glfw_initialized = false;
@@ -42,8 +45,17 @@ namespace MH
             s_glfw_initialized = true;
         }
 
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
         m_window = glfwCreateWindow((int)props.width, (int)props.height, m_data.title.c_str(), nullptr, nullptr);
         glfwMakeContextCurrent(m_window);
+
+        int glad_init_result = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+        assert(glad_init_result);
+
         glfwSetWindowUserPointer(m_window, &m_data);
         
         set_vsync(true);
