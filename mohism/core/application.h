@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "window.h"
+#include "events/application_event.h"
 
 namespace MH
 {
@@ -13,8 +14,9 @@ public:
     void run();
 
     void on_event(Event& e);
-    
+
 private:
+    bool on_window_close(WindowCloseEvent& e);
     std::unique_ptr<Window> m_window;
     bool is_running = true;
 };

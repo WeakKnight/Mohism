@@ -1,5 +1,6 @@
-#include "application.h"
 #include "log.h"
+#include "application.h"
+
 namespace MH
 {
 Application::Application()
@@ -21,7 +22,16 @@ void Application::run()
 
 void Application::on_event(Event& e)
 {
-    CORE_LOG_INFO("{0}", e);
+    CORE_LOG_INFO("{0}", e.to_string());
+
+    EventDispatcher dispatcher(e);
+    dispatcher.dispatch<WindowCloseEvent>(std::bind(&Application::on_window_close, this, std::placeholders::_1));
+}
+
+bool Application::on_window_close(WindowCloseEvent& e)
+{
+    is_running = false;
+    return true;
 }
 
 } // namespace mh

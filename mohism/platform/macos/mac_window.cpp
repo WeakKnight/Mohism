@@ -73,16 +73,22 @@ namespace MH
             switch(action)
             {
                 case GLFW_PRESS:
-                KeyPressedEvent event(key, 0);
-                data.event_callback(event);
+                {
+                    KeyPressedEvent event(key, 0);
+                    data.event_callback(event);
+                }
                 break;
                 case GLFW_RELEASE:
-                KeyReleasedEvent event(key);
-                data.event_callback(event);
+                {
+                    KeyReleasedEvent event(key);
+                    data.event_callback(event);
+                }
                 break;
                 case GLFW_REPEAT:
-                KeyPressedEvent event(key, 1);
-                data.event_callback(event);
+                {
+                    KeyPressedEvent event(key, 1);
+                    data.event_callback(event);
+                }
                 break;
                 default:
                 break;
@@ -95,12 +101,16 @@ namespace MH
             switch(action)
             {
                 case GLFW_PRESS:
-                MouseButtonPressedEvent event(button);
-                data.event_callback(event);
+                {
+                    MouseButtonPressedEvent event(button);
+                    data.event_callback(event);
+                }
                 break;
                 case GLFW_RELEASE:
-                MouseButtonPressedEvent event(button);
-                data.event_callback(event);
+                {
+                    MouseButtonReleasedEvent event(button);
+                    data.event_callback(event);
+                }
                 break;
                 default:
                 break;
