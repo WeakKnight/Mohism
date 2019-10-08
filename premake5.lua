@@ -12,6 +12,8 @@ workspace "mohism"
 
 outputdir = "%{cfg.system}-%{cfg.buildcfg}"
 
+include "3rdparty/glfw"
+
 project "mohism"
     location "build"
     kind "SharedLib"
@@ -31,7 +33,9 @@ project "mohism"
 
     includedirs
     {
-        "3rdparty/spdlog/include"
+        "3rdparty/spdlog/include",
+        "3rdparty/glfw/include",
+        "mohism/"
     }
 
     filter "system:macosx"
@@ -42,6 +46,27 @@ project "mohism"
         defines
         {
             "MH_PLATFORM_MACOS",
+        }
+
+        links 
+        {
+            --"libiconv",
+            "glfw",
+            "ForceFeedback.framework",
+            "AudioToolbox.framework",
+            "CoreAudio.framework",
+            "CoreVideo.framework",
+            "IOKit.framework",
+            "Carbon.framework",
+            "Cocoa.framework",
+            "OpenGL.framework",
+            "CoreFoundation.framework",
+        }
+
+        buildoptions 
+        {
+            "-F /Library/Frameworks", 
+            "-F ~/Library/Frameworks"
         }
     
     filter "configurations:debug"
