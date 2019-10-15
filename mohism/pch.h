@@ -13,6 +13,8 @@
 #include <vector>
 #include <string>
 
+#include <math.h>
+
 #ifdef MH_PLATFORM_WINDOWS
     #include <Windows.h>
 #endif 

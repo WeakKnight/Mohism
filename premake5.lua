@@ -14,6 +14,7 @@ outputdir = "%{cfg.system}-%{cfg.buildcfg}"
 
 include "3rdparty/glfw"
 include "3rdparty/glad"
+include "3rdparty/imgui"
 
 project "mohism"
     location "build"
@@ -29,7 +30,9 @@ project "mohism"
     files
     {
         "mohism/**.h",
-        "mohism/**.cpp"
+        "mohism/**.cpp",
+        "3rdparty/glm/glm/**.hpp",
+        "3rdparty/glm/glm/**.inl",
     }
 
     includedirs
@@ -37,6 +40,8 @@ project "mohism"
         "3rdparty/spdlog/include",
         "3rdparty/glfw/include",
         "3rdparty/glad/include",
+        "3rdparty/imgui",
+        "3rdparty/glm",
         "mohism/"
     }
 
@@ -54,6 +59,7 @@ project "mohism"
         links 
         {
             --"libiconv",
+            "imgui",
             "glfw",
             "glad",
             "ForceFeedback.framework",

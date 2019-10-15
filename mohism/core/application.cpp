@@ -29,19 +29,19 @@ void Application::run()
 
 void Application::on_event(Event& e)
 {
-    CORE_LOG_INFO("{0}", e.to_string());
+    // CORE_LOG_INFO("{0}", e.to_string());
 
     EventDispatcher dispatcher(e);
     dispatcher.dispatch<WindowCloseEvent>(std::bind(&Application::on_window_close, this, std::placeholders::_1));
 
-    for(auto it = m_layer_stack.end() - 1; it != m_layer_stack.begin(); it--)
-    {
-        (*it)->on_event(e);
-        if(e.handled)
-        {
-            break;
-        }
-    }
+//    for(auto it = m_layer_stack.end() - 1; it != m_layer_stack.begin(); it--)
+//    {
+//        (*it)->on_event(e);
+//        if(e.handled)
+//        {
+//            break;
+//        }
+//    }
 }
 
 bool Application::on_window_close(WindowCloseEvent& e)

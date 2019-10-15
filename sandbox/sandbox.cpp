@@ -24,7 +24,7 @@ class Sandbox: public MH::Application
 public:
     Sandbox()
     {
-        push_layer(new TestLayer());
+//        push_layer(new TestLayer());
     }
     ~Sandbox()
     {
