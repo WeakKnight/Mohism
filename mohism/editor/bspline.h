@@ -3,6 +3,7 @@
 #include "glm/vec3.hpp"
 #include "transformation.h"
 #include "glad/glad.h"
+#include "core/log.h"
 
 namespace MH
 {
@@ -43,18 +44,72 @@ namespace MH
             need_updated = true;
         }
         
+        void remove_knot_vector(size_t index)
+        {
+            knot_vector.erase(knot_vector.begin() + index);
+            need_updated = true;
+        }
+        void add_knot_vector(float value)
+        {
+            knot_vector.push_back(value);
+            need_updated = true;
+        }
+        void add_knot_vector(std::vector<float>& values)
+        {
+            knot_vector.insert(knot_vector.end(), values.begin(), values.end());
+            need_updated = true;
+        }
+        void insert_knot_vector(size_t index, float value)
+        {
+            knot_vector.insert(knot_vector.begin() + index, value);
+            need_updated = true;
+        }
+        
+        void process_knot_vector_by_degree_and_control_points()
+        {
+            used_knot_num = control_points.size() + k() + 1;
+            // N = count of control points + k, N = count of knot vector + 1
+            if(knot_vector.size() == used_knot_num)
+            {
+                // do nothing
+                LOG_INFO("good");
+            }
+            // extra
+            else if(knot_vector.size() > used_knot_num)
+            {
+                LOG_INFO("Extra knot vector, ok");
+            }
+            // not enough, regenerate knot vector
+            else
+            {
+                LOG_INFO("need more knots");
+            }
+            
+            for(int i = 0; i < used_knot_num - 1; i++)
+            {
+                if(t(i) < t(i+1))
+                {
+                    if(i > j_max)
+                    {
+                        j_max = i;
+                    }
+                }
+            }
+            
+            domain.clear();
+            domain.push_back(t(k()));
+            domain.push_back(t(N() - k()));
+        }
+        
         void update_render_data()
         {
             if(need_updated)
             {
                 need_updated = false;
                 
-//                float vertices[] = {
-//                    // positions
-//                    50.0f, -50.0f, 0.0f,
-//                    -50.0f, -50.0f, 0.0f,
-//                    0.0f,  50.0f, 0.0f
-//                };
+                process_knot_vector_by_degree_and_control_points();
+                
+                sample_line_segments();
                 
                 vertices.clear();
                 
@@ -66,14 +121,19 @@ namespace MH
                     vertices.push_back(point.z);
                 }
                 
+                for(int i = 0; i < line_segments.size(); i++)
+                {
+                    const auto& point = line_segments[i];
+                    vertices.push_back(point.x);
+                    vertices.push_back(point.y);
+                    vertices.push_back(point.z);
+                }
+                
                 glBindVertexArray(VAO);
                 
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_DYNAMIC_DRAW);
                 
-//                 glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-                
-                // position attribute
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
                 glEnableVertexAttribArray(0);
             }
@@ -84,16 +144,142 @@ namespace MH
             update_render_data();
             glBindVertexArray(VAO);
             glDrawArrays(GL_LINE_STRIP, 0, control_points.size());
+            glDrawArrays(GL_LINE_STRIP, control_points.size(), line_segments.size());
+        }
+        
+        void set_degree(int value)
+        {
+            degree = value;
+        }
+        
+        int get_degree()
+        {
+            return degree;
         }
         
     private:
         
+        void sample_line_segments(int sample_count = 110)
+        {
+            float domain_length = domain[1] - domain[0];
+            
+            float delta = domain_length / (float)(sample_count + 2);
+            
+            for(int i = 1; i < sample_count; i ++)
+            {
+                line_segments.push_back(evaluate(domain[0] + i * delta));
+            }
+        }
+        
+        glm::vec3 evaluate(float _t)
+        {
+            glm::vec3 result(0.0f, 0.0f, 0.0f);
+            
+            for(int i = 0; i < control_points.size(); i++)
+            {
+                float blending_value = blending_func(i, k(), _t);
+                result += (blending_value * control_points[i]);
+            }
+            
+            return result;
+        }
+        
+        float blending_func(int i, int _k, float _t)
+        {
+            if(_k == 0)
+            {
+                if(modified)
+                {
+                    if(_t >= t(j_max) && _t <= t(j_max + 1))
+                    {
+                        return 1;
+                    }
+                    
+                    if(_t >= t(i) && _t < t(i + 1))
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                    
+                }
+                else
+                {
+                    if(_t >= t(i) && _t < t(i + 1))
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            }
+            else
+            {
+                assert(_k > 0);
+                if(t(i) < t(i + 1 + _k))
+                {
+                    float left_factor = (_t - t(i)) / (t(i + _k) - t(i));
+                    float left_blending = blending_func(i, _k - 1, _t);
+                    float left_result = left_factor * left_blending;
+                    
+                    if(left_blending == 0.0f)
+                    {
+                        left_result = 0.0f;
+                    }
+                    
+                    float right_factor = (t(i + 1 + _k) - _t)/(t(i + 1 + _k) - t(i + 1));
+                    float right_blending = blending_func(i + 1, _k - 1, _t);
+                    float right_result = right_factor * right_blending;
+                    
+                    if(right_blending == 0.0f)
+                    {
+                        right_result = 0.0f;
+                    }
+                    
+                    return left_result + right_result;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        
+        inline int N()
+        {
+            return knot_vector.size() - 1;
+        }
+        
+        inline int k()
+        {
+            return degree;
+        }
+        
+        int j_max = 0;
+        
+        
+        inline float t(int i)
+        {
+            return knot_vector[i];
+        }
+        
+        bool need_save_knot_vector = false;
+        bool modified = false;
         bool need_updated = false;
+        
+        std::vector<glm::vec3> control_points;
+        int degree;
+        std::vector<float> knot_vector;
+        int used_knot_num;
+        
+        std::vector<float> domain;
         
         std::vector<float> vertices;
         std::vector<glm::vec3> line_segments;
-        std::vector<glm::vec3> control_points;
-        std::vector<float> knot_vector;
         
         unsigned int VAO;
         unsigned int VBO;

@@ -7,6 +7,7 @@
 namespace MH
 {
     class Shader;
+    class CurveGroup;
     
     class MainLayout
     {
@@ -20,5 +21,6 @@ namespace MH
     private:
         Shader* defaultShader;
         Window* window;
+        std::shared_ptr<CurveGroup> group;
     };
 } // namespace MH

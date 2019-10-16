@@ -49,10 +49,10 @@ namespace MH
 
         void process_mouse_scroll(float y_offset)
         {
-            zoom += (y_offset/20.0f);
-            if(zoom >= 20.0f)
+            zoom += y_offset * 7.0f;
+            if(zoom >= 2000.0f)
             {
-                zoom = 20.0f;
+                zoom = 2000.0f;
             }
             if(zoom <= 0.05f)
             {
@@ -66,7 +66,7 @@ namespace MH
                                     );
         }
 
-        float zoom = 1.0f;
+        float zoom = 300.0f;
         glm::mat4 projection;
         Transformation transformation;
         float width;

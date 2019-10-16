@@ -4,6 +4,7 @@
 #include "GLFW/glfw3.h"
 #include "bspline.h"
 #include "core/log.h"
+#include "serializer.h"
 
 namespace MH
 {
@@ -36,32 +37,22 @@ namespace MH
 
     void MainLayout::init()
     {
+        group = std::make_shared<CurveGroup>();
         camera = new Camera(window->get_width(), window->get_height());
         
         defaultShader = new Shader("default.vert", "default.frag");
-        
-//        glGenVertexArrays(1, &VAO);
-//        glGenBuffers(1, &VBO);
-//        // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-//        glBindVertexArray(VAO);
-//
-//        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-//        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-//
-//        // position attribute
-//        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-//        glEnableVertexAttribArray(0);
         
         glfwSetScrollCallback((GLFWwindow*)window->get_native_window(), [](GLFWwindow* window, double dx, double dy)
         {
             camera->process_mouse_scroll(dy);
         });
         
-        bspline = new BSpline();
-        bspline->add_control_point(glm::vec3(50.0f, -50.0f, 0.0f));
-        bspline->add_control_point(glm::vec3(-50.0f, -50.0f, 0.0f));
-        bspline->add_control_point(glm::vec3(0.0f,  50.0f, 0.0f));
-        bspline->update_render_data();
+        
+        auto test = deserialize("2d/curve2a.dat");
+        for(int i = 0; i < test.size(); i++)
+        {
+            group->add_child(test[i]);
+        }
     }
     
     void MainLayout::update()
@@ -93,7 +84,7 @@ namespace MH
         {
             auto pos = ImGui::GetIO().MousePos;
             
-            LOG_INFO("x:{0} y:{1}", pos.x, pos.y);
+//            LOG_INFO("x:{0} y:{1}", pos.x, pos.y);
             
             if(ImGui::IsMouseClicked(0))
             {
@@ -108,13 +99,19 @@ namespace MH
             // render the triangle
             defaultShader->use();
 
+            defaultShader->setVec4("customColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             defaultShader->setMat4("projection", projection);
             defaultShader->setMat4("view", view);
             defaultShader->setMat4("model", model);// in this editor, model always is identity
 
     //        glBindVertexArray(VAO);
     //        glDrawArrays(GL_TRIANGLES, 0, 3);
-            bspline->draw();
+            for(int i = 0; i < group->get_child_count(); i++)
+            {
+                auto child = group->get_child(i);
+                child->draw();
+            }
+//            bspline->draw();
         }
     }
 }
