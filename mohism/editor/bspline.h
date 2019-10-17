@@ -4,6 +4,7 @@
 #include "transformation.h"
 #include "glad/glad.h"
 #include "core/log.h"
+#include "shader.h"
 
 namespace MH
 {
@@ -23,24 +24,50 @@ namespace MH
             glDeleteBuffers(1, &VBO);
         }
         
+        std::vector<glm::vec3>& get_control_points()
+        {
+            return control_points;
+        }
+        
+        std::vector<glm::mat4>& get_control_point_matrixes()
+        {
+            return control_point_matrixes;
+        }
+        
         void remove_control_point(size_t index)
         {
             control_points.erase(control_points.begin() + index);
+            control_point_matrixes.erase(control_point_matrixes.begin() + index);
             need_updated = true;
         }
+        
         void add_control_point(glm::vec3 point)
         {
             control_points.push_back(point);
+            control_point_matrixes.push_back(calculate_control_point_matrix(point));
+            
             need_updated = true;
         }
         void add_control_points(std::vector<glm::vec3>& points)
         {
             control_points.insert(control_points.end(), points.begin(), points.end());
+            
+            std::vector<glm::mat4> matrixes;
+            for(int i = 0; i < points.size(); i ++)
+            {
+                auto point = points[i];
+                matrixes.push_back(calculate_control_point_matrix(point));
+            }
+            control_point_matrixes.insert(control_point_matrixes.end(), matrixes.begin(), matrixes.end());
+            
             need_updated = true;
         }
+        
         void insert_control_point(size_t index, glm::vec3 point)
         {
             control_points.insert(control_points.begin() + index, point);
+            control_point_matrixes.insert(control_point_matrixes.begin() + index, calculate_control_point_matrix(point));
+            
             need_updated = true;
         }
         
@@ -139,11 +166,15 @@ namespace MH
             }
         }
         
-        void draw()
+        void draw(Shader* shader)
         {
             update_render_data();
             glBindVertexArray(VAO);
+            // polygon
+            shader->setVec4("customColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
             glDrawArrays(GL_LINE_STRIP, 0, control_points.size());
+            
+            shader->setVec4("customColor", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
             glDrawArrays(GL_LINE_STRIP, control_points.size(), line_segments.size());
         }
         
@@ -157,18 +188,33 @@ namespace MH
             return degree;
         }
         
+        void mark_need_update()
+        {
+            need_updated = true;
+        }
+        
     private:
         
-        void sample_line_segments(int sample_count = 110)
+        glm::mat4 calculate_control_point_matrix(glm::vec3 point)
         {
+            auto result = glm::translate(glm::mat4(1.0f), point);
+            return result;
+        }
+        
+        void sample_line_segments(int sample_count = 200)
+        {
+            line_segments.clear();
+            
             float domain_length = domain[1] - domain[0];
             
             float delta = domain_length / (float)(sample_count + 2);
             
-            for(int i = 1; i < sample_count; i ++)
+            line_segments.push_back(evaluate(domain[0]));
+            for(int i = 1; i <= sample_count; i ++)
             {
-                line_segments.push_back(evaluate(domain[0] + i * delta));
+                line_segments.push_back(evaluate(domain[0] + (i) * delta));
             }
+            line_segments.push_back(evaluate(domain[1]));
         }
         
         glm::vec3 evaluate(float _t)
@@ -272,6 +318,8 @@ namespace MH
         bool need_updated = false;
         
         std::vector<glm::vec3> control_points;
+        std::vector<glm::mat4> control_point_matrixes;
+        
         int degree;
         std::vector<float> knot_vector;
         int used_knot_num;

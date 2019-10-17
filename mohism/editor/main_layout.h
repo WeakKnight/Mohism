@@ -14,11 +14,13 @@ namespace MH
     public:
         void init();
         void update();
+        void on_imgui();
         void set_window(Window* window)
         {
             this->window = window;
         }
     private:
+        void on_menu_bar();
         Shader* defaultShader;
         Window* window;
         std::shared_ptr<CurveGroup> group;

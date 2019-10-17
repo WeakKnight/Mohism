@@ -195,6 +195,8 @@ namespace MH
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
+        main_layout.on_imgui();
+        
         // Rendering
         ImGui::Render();
         
