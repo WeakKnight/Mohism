@@ -83,17 +83,17 @@ namespace MH
                                             0.0f, 1.0f));
         };
         
-        auto screen_to_world_relative = [&view, &projection, &viewInverse, &projectionInverse, this](glm::vec2 screen_pos)
-        {
-            auto screenX = (screen_pos.x) / (window->get_width() * 0.5f);
-            auto screenY = -1.0f * (screen_pos.y) / (window->get_height() * 0.5f);
-            
-            return viewInverse * (projectionInverse *
-                                  glm::vec4(
-                                            screenX,
-                                            screenY,
-                                            0.0f, 1.0f));
-        };
+//        auto screen_to_world_relative = [&view, &projection, &viewInverse, &projectionInverse, this](glm::vec2 screen_pos)
+//        {
+//            auto screenX = (screen_pos.x) / (window->get_width() * 0.5f);
+//            auto screenY = -1.0f * (screen_pos.y) / (window->get_height() * 0.5f);
+//            
+//            return viewInverse * (projectionInverse *
+//                                  glm::vec4(
+//                                            screenX,
+//                                            screenY,
+//                                            0.0f, 1.0f));
+//        };
         
         auto world_to_screen = [&view, &projection, this](glm::vec3 world_pos)
         {

@@ -92,6 +92,38 @@ namespace MH
             need_updated = true;
         }
         
+        void generate_modified_open_knot_uniform_vector()
+        {
+            knot_vector.clear();
+            for(int i = 0; i < used_knot_num; i++)
+            {
+                if(i <= k())
+                {
+                    knot_vector.push_back(0.0f);
+                }
+                else if (i >= (used_knot_num - k() - 1))
+                {
+                    if(i == (used_knot_num - 1))
+                    {
+                        knot_vector.push_back(knot_vector[used_knot_num - k() - 2] + 1.5f);
+                    }
+                    else
+                    {
+                        knot_vector.push_back(knot_vector[used_knot_num - k() - 2] + 1.0f);
+                    }
+                }
+                else
+                {
+                    knot_vector.push_back(knot_vector[i - 1] + 1.0f);
+                }
+            }
+        }
+        
+        void generate_float_uniform_knot_vector()
+        {
+            
+        }
+        
         void process_knot_vector_by_degree_and_control_points()
         {
             used_knot_num = control_points.size() + k() + 1;
@@ -110,6 +142,7 @@ namespace MH
             else
             {
                 LOG_INFO("need more knots");
+                generate_modified_open_knot_uniform_vector();
             }
             
             for(int i = 0; i < used_knot_num - 1; i++)
@@ -234,9 +267,9 @@ namespace MH
         {
             if(_k == 0)
             {
-                if(modified)
+//                if(modified)
                 {
-                    if(_t >= t(j_max) && _t <= t(j_max + 1))
+                    if(_t == t(j_max + 1))
                     {
                         return 1;
                     }
@@ -251,17 +284,17 @@ namespace MH
                     }
                     
                 }
-                else
-                {
-                    if(_t >= t(i) && _t < t(i + 1))
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
+//                else
+//                {
+//                    if(_t >= t(i) && _t < t(i + 1))
+//                    {
+//                        return 1;
+//                    }
+//                    else
+//                    {
+//                        return 0;
+//                    }
+//                }
             }
             else
             {

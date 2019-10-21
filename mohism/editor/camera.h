@@ -36,15 +36,15 @@ namespace MH
 
         void process_keyboard(CameraMovement direction, float deltaTime)
         {
-            float velocity = 50.0f * deltaTime;
+            float velocity = 300.0f * deltaTime;
             if (direction == UP)
-                transformation.move_up (1.0f * velocity);
+                transformation.move_up (1.0f * velocity / zoom);
             if (direction == DOWN)
-                transformation.move_up (-1.0f * velocity);
+                transformation.move_up (-1.0f * velocity / zoom);
             if (direction == LEFT)
-                transformation.move_right(-1.0f * velocity);
+                transformation.move_right(-1.0f * velocity / zoom);
             if (direction == RIGHT)
-                transformation.move_right(1.0f * velocity);
+                transformation.move_right(1.0f * velocity / zoom);
         }
 
         void process_mouse_scroll(float y_offset)
