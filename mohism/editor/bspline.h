@@ -6,6 +6,9 @@
 #include "core/log.h"
 #include "shader.h"
 
+#define OPEN_KNOT_MODIFIED_UNIFORM_VECTOR 1
+#define FLOATING_UNIFORM_VECTOR 2
+
 namespace MH
 {
     class BSpline
@@ -121,10 +124,14 @@ namespace MH
         
         void generate_float_uniform_knot_vector()
         {
-            
+            knot_vector.clear();
+            for(int i = 0; i < used_knot_num; i++)
+            {
+                knot_vector.push_back(i);
+            }
         }
         
-        void process_knot_vector_by_degree_and_control_points()
+        void process_knot_vector_by_degree_and_control_points(int type = OPEN_KNOT_MODIFIED_UNIFORM_VECTOR)
         {
             used_knot_num = control_points.size() + k() + 1;
             // N = count of control points + k, N = count of knot vector + 1
@@ -142,7 +149,18 @@ namespace MH
             else
             {
                 LOG_INFO("need more knots");
-                generate_modified_open_knot_uniform_vector();
+                if(type == OPEN_KNOT_MODIFIED_UNIFORM_VECTOR)
+                {
+                    generate_modified_open_knot_uniform_vector();
+                }
+                else if(type == FLOATING_UNIFORM_VECTOR)
+                {
+                    generate_float_uniform_knot_vector();
+                }
+                else
+                {
+                    assert(false);
+                }
             }
             
             for(int i = 0; i < used_knot_num - 1; i++)

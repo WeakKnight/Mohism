@@ -49,20 +49,72 @@ namespace MH
             camera->process_mouse_scroll(dy);
         });
         
-        
-        auto test = deserialize("2d/test.dat");
-        for(int i = 0; i < test.size(); i++)
-        {
-            group->add_child(test[i]);
-        }
-        
         glLineWidth(2.0f);
         glEnable(GL_LINE_SMOOTH);
     }
     
     void MainLayout::on_menu_bar()
     {
+        static int action = -1;
         
+        ImGui::BeginMainMenuBar();
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open"))
+            {
+                action = 1;
+            }
+            else if (ImGui::MenuItem("Save"))
+            {
+               
+            }
+            else if (ImGui::MenuItem("Save As..."))
+            {
+                action = 2;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+        
+        static char pathBuf[256];
+        
+        if(action == 1)
+        {
+            ImGui::OpenPopup("Select File");
+        }
+        
+        if (ImGui::BeginPopupModal("Select File"))
+        {
+            ImGui::InputText("File Path", pathBuf, 256);
+            
+            static int READING_TYPE_OPTION = 0;
+            ImGui::Text("What To Do When Not Having Predefined Knot Point?");
+            ImGui::RadioButton("Read As Open Modified", &READING_TYPE_OPTION, OPEN_KNOT_MODIFIED_UNIFORM_VECTOR); ImGui::SameLine();
+            ImGui::RadioButton("Read As Floating", &READING_TYPE_OPTION, FLOATING_UNIFORM_VECTOR); ImGui::SameLine();
+            
+            ImGui::NewLine();
+            if (ImGui::Button("OK", ImVec2(120, 0)))
+            {
+                group->clear();
+                auto curves = deserialize(pathBuf);
+                for(int i = 0; i < curves.size(); i++)
+                {
+                    auto curve = curves[i];
+                    curve->process_knot_vector_by_degree_and_control_points(READING_TYPE_OPTION);
+                    group->add_child(curves[i]);
+                }
+                
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            ImGui::EndPopup();
+        }
     }
     
     void MainLayout::on_imgui()
@@ -120,10 +172,15 @@ namespace MH
         static bool transparent_open = true;
         
         ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::SetNextWindowPos(glm::vec2(0.0f, 0.0f));
+        ImGui::SetNextWindowPos(glm::vec2(0.0f, 18.0f));
         ImGui::SetNextWindowSize(io.DisplaySize);
         
-        if (ImGui::Begin("Example: Simple overlay", &transparent_open,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+        if (ImGui::Begin("Example: Simple overlay", &transparent_open,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings
+                         |
+                         ImGuiWindowFlags_NoFocusOnAppearing |
+                         ImGuiWindowFlags_NoScrollbar |
+                         ImGuiWindowFlags_NoNav
+                         ))
         {
             for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
             {
@@ -196,9 +253,6 @@ namespace MH
             }
         }
         ImGui::End();
-        
-        on_menu_bar();
-        
 //        if(ImGui::IsMouseDragging(2) ||
 //           (ImGui::IsMouseDragging(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_Space)))
 //           )
@@ -206,6 +260,7 @@ namespace MH
 //            auto delta = (io.MouseDelta);
 //            camera->transformation.translate(-screen_to_world_relative(delta));
 //        }
+        on_menu_bar();
     }
     
     void MainLayout::update()

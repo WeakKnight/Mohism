@@ -47,7 +47,7 @@ namespace MH
             bsplines.push_back(bspline);
         }
         
-        void Clear()
+        void clear()
         {
             bsplines.clear();
         }
