@@ -202,8 +202,15 @@ namespace MH
                     
                     if(ImGui::InvisibleButton(hashId.c_str(), ImVec2((circleRadius + buttonBorder), (circleRadius + buttonBorder))))
                     {
-                        selectedIndex = curve_index;
-                        selectedPointIndex = point_index;
+                        if(ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_X)))
+                        {
+                            child->remove_control_point(point_index);
+                        }
+                        else
+                        {
+                            selectedIndex = curve_index;
+                            selectedPointIndex = point_index;
+                        }
                     }
                     
                     if (
