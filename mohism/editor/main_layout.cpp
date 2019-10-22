@@ -19,7 +19,6 @@ namespace MH
     
 //    unsigned int VBO, VAO;
     Camera* camera = nullptr;
-    BSpline* bspline = nullptr;
     
     // timing
     float deltaTime = 0.0f;	// time between current frame and last frame
@@ -87,7 +86,7 @@ namespace MH
         {
             ImGui::InputText("File Path", pathBuf, 256);
             
-            static int READING_TYPE_OPTION = 0;
+            static int READING_TYPE_OPTION = OPEN_KNOT_MODIFIED_UNIFORM_VECTOR;
             ImGui::Text("What To Do When Not Having Predefined Knot Point?");
             ImGui::RadioButton("Read As Open Modified", &READING_TYPE_OPTION, OPEN_KNOT_MODIFIED_UNIFORM_VECTOR); ImGui::SameLine();
             ImGui::RadioButton("Read As Floating", &READING_TYPE_OPTION, FLOATING_UNIFORM_VECTOR); ImGui::SameLine();
@@ -107,7 +106,9 @@ namespace MH
                 ImGui::CloseCurrentPopup();
                 action = -1;
             }
+            
             ImGui::SameLine();
+            
             if (ImGui::Button("Cancel", ImVec2(120, 0)))
             {
                 ImGui::CloseCurrentPopup();
@@ -191,8 +192,6 @@ namespace MH
                 {
                     auto point = control_points[point_index];
                     
-//                    ImGuizmo::Manipulate(&view[0][0], &projection[0][0], ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &matrix[0][0]);
-                    
                     auto screen_pos = world_to_screen(point);
                     overlay_drawList->AddCircle(screen_pos, circleRadius, IM_COL32(255, 255, 255, 255));
                     
@@ -253,13 +252,85 @@ namespace MH
             }
         }
         ImGui::End();
-//        if(ImGui::IsMouseDragging(2) ||
-//           (ImGui::IsMouseDragging(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_Space)))
-//           )
-//        {
-//            auto delta = (io.MouseDelta);
-//            camera->transformation.translate(-screen_to_world_relative(delta));
-//        }
+        
+        auto pos = ImGui::GetIO().MousePos;
+        if(ImGui::IsMouseClicked(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_Z)))
+        {
+            glm::vec3 worldPos = screen_to_world(pos);
+            worldPos = glm::vec3(worldPos.x, worldPos.y, 0.0f);
+            
+            float minimum_distance = INFINITY;
+            int minimum_curve_index = -1;
+            int minimum_edge_index = -1;
+            // -1 = left, 0 = inside, 1 = right
+            int minimum_side = 0;
+            
+            for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
+            {
+                auto curve = group->get_child(curve_index);
+                auto& control_points = curve->get_control_points();
+                for(int point_index = 0; point_index < control_points.size() - 1; point_index++)
+                {
+                    auto point_a = control_points[point_index];
+                    auto point_b = control_points[point_index + 1];
+                    auto point_c = worldPos;
+                    
+                    // calculate c to segment ab
+                    auto ac = point_c - point_a;
+                    auto ab = point_b - point_a;
+                    
+                    auto bc = point_c - point_b;
+                    auto ba = -ab;
+                    
+                    float distance = 0.0f;
+                    int side = 0;
+                    
+                    if(glm::dot(ac, ab) < 0.0f)
+                    {
+                        distance = glm::length(ac);
+                        side = -1;
+                    }
+                    else if(glm::dot(bc, ba) < 0.0f)
+                    {
+                        distance = glm::length(bc);
+                        side = 1;
+                    }
+                    else
+                    {
+                        auto perp = glm::dot(glm::normalize(ba), bc);
+                        distance = sqrt(glm::dot(bc, bc) - perp * perp);
+                        side = 0;
+                    }
+                    
+                    if(minimum_distance > distance)
+                    {
+                        minimum_distance = distance;
+                        minimum_curve_index = curve_index;
+                        minimum_edge_index = point_index;
+                        minimum_side = side;
+                    }
+                }
+            }
+
+            if(minimum_curve_index != -1)
+            {
+                auto target_curve = group->get_child(minimum_curve_index);
+                
+                if(minimum_side == 0)
+                {
+                    target_curve->insert_control_point(minimum_edge_index + 1, worldPos);
+                }
+                else if(minimum_side == 1)
+                {
+                    target_curve->insert_control_point(minimum_edge_index + 2, worldPos);
+                }
+                else if(minimum_side == -1)
+                {
+                    target_curve->insert_control_point(minimum_edge_index + 0, worldPos);
+                }
+            }
+        }
+        
         on_menu_bar();
     }
     

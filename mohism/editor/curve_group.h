@@ -38,7 +38,7 @@ namespace MH
         }
         
         std::shared_ptr<BSpline> get_child(int index)
-        {
+        {   
             return bsplines[index];
         }
         

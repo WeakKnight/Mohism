@@ -32,6 +32,21 @@ namespace MH
             return control_points;
         }
         
+        glm::vec3 get_control_point(int index)
+        {
+            if(index < 0)
+            {
+                index = 0;
+            }
+            
+            if (index >= control_points.size())
+            {
+                index = control_points.size() - 1;
+            }
+            
+            return control_points[index];
+        }
+        
         std::vector<glm::mat4>& get_control_point_matrixes()
         {
             return control_point_matrixes;
@@ -68,6 +83,16 @@ namespace MH
         
         void insert_control_point(size_t index, glm::vec3 point)
         {
+//            if(index < 0)
+//            {
+//                index = 0;
+//            }
+//            
+//            if(index >= control_points.size())
+//            {
+//                index = control_points.size() - 1;
+//            }
+            
             control_points.insert(control_points.begin() + index, point);
             control_point_matrixes.insert(control_point_matrixes.begin() + index, calculate_control_point_matrix(point));
             
@@ -133,6 +158,8 @@ namespace MH
         
         void process_knot_vector_by_degree_and_control_points(int type = OPEN_KNOT_MODIFIED_UNIFORM_VECTOR)
         {
+            knot_vector_type = type;
+            
             used_knot_num = control_points.size() + k() + 1;
             // N = count of control points + k, N = count of knot vector + 1
             if(knot_vector.size() == used_knot_num)
@@ -185,7 +212,7 @@ namespace MH
             {
                 need_updated = false;
                 
-                process_knot_vector_by_degree_and_control_points();
+                process_knot_vector_by_degree_and_control_points(knot_vector_type);
                 
                 sample_line_segments();
                 
@@ -285,34 +312,19 @@ namespace MH
         {
             if(_k == 0)
             {
-//                if(modified)
+                if(_t == t(j_max + 1))
                 {
-                    if(_t == t(j_max + 1))
-                    {
-                        return 1;
-                    }
-                    
-                    if(_t >= t(i) && _t < t(i + 1))
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                    
+                    return 1;
                 }
-//                else
-//                {
-//                    if(_t >= t(i) && _t < t(i + 1))
-//                    {
-//                        return 1;
-//                    }
-//                    else
-//                    {
-//                        return 0;
-//                    }
-//                }
+                
+                if(_t >= t(i) && _t < t(i + 1))
+                {
+                    return 1;
+                }
+                else
+                {
+                    return 0;
+                }
             }
             else
             {
@@ -364,8 +376,9 @@ namespace MH
             return knot_vector[i];
         }
         
+        int knot_vector_type = OPEN_KNOT_MODIFIED_UNIFORM_VECTOR;
+        
         bool need_save_knot_vector = false;
-        bool modified = false;
         bool need_updated = false;
         
         std::vector<glm::vec3> control_points;
