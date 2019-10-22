@@ -32,6 +32,11 @@ namespace MH
             return control_points;
         }
         
+        std::vector<float>& get_knot_vector()
+        {
+            return knot_vector;
+        }
+        
         glm::vec3 get_control_point(int index)
         {
             if(index < 0)
@@ -271,6 +276,15 @@ namespace MH
             need_updated = true;
         }
         
+        void set_dimension(int value)
+        {
+            dimension = value;
+        }
+        
+        int get_dimension()
+        {
+            return dimension;        }
+        
     private:
         
         glm::mat4 calculate_control_point_matrix(glm::vec3 point)
@@ -392,6 +406,8 @@ namespace MH
         
         std::vector<float> vertices;
         std::vector<glm::vec3> line_segments;
+        
+        int dimension;
         
         unsigned int VAO;
         unsigned int VBO;

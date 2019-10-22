@@ -10,32 +10,29 @@ namespace MH
 static std::string serialize(CurveGroup &bspline_group)
 {
     std::string res = "";
-//    res += StringUtils::Format("%d\n", bezierGroup.GetChildCount());
-//    for (int i = 0; i < bezierGroup.GetChildCount(); i++)
-//    {
-//        auto bezier = bezierGroup.GetChild(i);
-//        auto &controlPoints = bezier->GetControlPoints();
-//        auto &rationalControlPoints = bezier->GetRationalControlPoints();
-//
-//        if (bezier->IsRational())
-//        {
-//            res += StringUtils::Format("Q  %d\n", rationalControlPoints.size());
-//
-//            for (size_t j = 0; j < rationalControlPoints.size(); j++)
-//            {
-//                res += StringUtils::Format("%f  %f  %f\n", rationalControlPoints[j].x, rationalControlPoints[j].y, rationalControlPoints[j].z);
-//            }
-//        }
-//        else
-//        {
-//            res += StringUtils::Format("P  %d\n", controlPoints.size());
-//
-//            for (size_t j = 0; j < controlPoints.size(); j++)
-//            {
-//                res += StringUtils::Format("%f  %f\n", controlPoints[j].x, controlPoints[j].y);
-//            }
-//        }
-//    }
+    res += Format("%d\n", bspline_group.get_child_count());
+    for(int i = 0; i < bspline_group.get_child_count(); i++)
+    {
+        auto curve = bspline_group.get_child(i);
+        res += Format("%d\n", curve->get_degree());
+        auto& control_points = curve->get_control_points();
+        res += Format("%d\n", control_points.size());
+        
+        for(int j = 0; j < control_points.size(); j++)
+        {
+            res += Format("%f  %f  %f\n", control_points[j].x, control_points[j].y, control_points[j].z);
+        }
+        
+        res += Format("%d\n", 1);
+        
+        auto& knot_vector = curve->get_knot_vector();
+        for(int j = 0; j < knot_vector.size(); j++)
+        {
+            res += Format("%f ", knot_vector[j]);
+        }
+        res += "\n";
+    }
+
     return res;
 }
 
@@ -130,11 +127,13 @@ static std::vector<std::shared_ptr<BSpline>> deserialize(const std::string &path
                 
                 if(tokens.size() == 2)
                 {
+                    current_bspline->set_dimension(2);
                     glm::vec3 point = glm::vec3(std::stof(tokens[0]), std::stof(tokens[1]), 0.0f);
                     current_bspline->add_control_point(point);
                 }
                 if(tokens.size() == 3)
                 {
+                    current_bspline->set_dimension(3);
                     glm::vec3 point = glm::vec3(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]));
                     current_bspline->add_control_point(point);
                 }

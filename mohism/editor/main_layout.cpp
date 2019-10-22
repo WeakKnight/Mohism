@@ -52,6 +52,103 @@ namespace MH
         glEnable(GL_LINE_SMOOTH);
     }
     
+    void MainLayout::on_inspector()
+    {
+        static ImGuiWindowFlags toolboxFlag =  ImGuiWindowFlags_None;
+        static bool* toolboxOpen = nullptr;
+        ImGui::Begin("Inspector", toolboxOpen, toolboxFlag);
+        {
+            ImGui::BeginChild("left pane", ImVec2(170, 0), true);
+            
+            if(group->get_child_count() > 0 && selectedIndex != -1)
+            {
+                auto curve = group->get_child(selectedIndex);
+                if(ImGui::Button("degree raise"))
+                {
+                    curve->set_degree(curve->get_degree() + 1);
+                    curve->mark_need_update();
+                }
+                if(ImGui::Button("degree decline"))
+                {
+                    curve->set_degree(curve->get_degree() - 1);
+                    curve->mark_need_update();
+                }
+            }
+            
+            static char label[128];
+            
+            for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
+            {
+                auto curve = group->get_child(curve_index);
+                sprintf(label, "Degree %d Spline #%d", curve->get_degree(), curve_index);
+                if (ImGui::Selectable(label, selectedIndex == curve_index))
+                {
+                    selectedIndex = curve_index;
+                }
+            }
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("mid pane", ImVec2(210, 0), true);
+            if(group->get_child_count() > 0 && selectedIndex != -1)
+            {
+                auto curve = group->get_child(selectedIndex);
+                auto& control_points = curve->get_control_points();
+                
+                for(size_t i = 0; i < control_points.size(); i++)
+                {
+                    if(ImGui::InputFloat3(Format("#%d", (int)i).c_str(), &(control_points[i][0])))
+                    {
+                        curve->mark_need_update();
+                    }
+                    ImGui::SameLine();
+                    ImGui::PushID(i);
+                    if(ImGui::Button("X"))
+                    {
+                        curve->remove_control_point(i);
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("right pane", ImVec2(165, 0), true);
+            if(group->get_child_count() > 0 && selectedIndex != -1)
+            {
+                auto curve = group->get_child(selectedIndex);
+                auto& knot_vector = curve->get_knot_vector();
+                
+                if(ImGui::Button("OpenModified"))
+                {
+                    curve->generate_modified_open_knot_uniform_vector();
+                    curve->mark_need_update();
+                }
+                
+                if(ImGui::Button("Floating"))
+                {
+                    curve->generate_float_uniform_knot_vector();
+                    curve->mark_need_update();
+                }
+                
+                for(size_t i = 0; i < knot_vector.size(); i++)
+                {
+                    if(ImGui::InputFloat(Format("#%d", (int)i).c_str(), &(knot_vector[i])))
+                    {
+                        curve->mark_need_update();
+                    }
+                    ImGui::SameLine();
+                    ImGui::PushID(i);
+                    if(ImGui::Button("X"))
+                    {
+                        curve->remove_knot_vector(i);
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
+        }
+        ImGui::End();
+    }
+    
     void MainLayout::on_menu_bar()
     {
         static int action = -1;
@@ -65,7 +162,11 @@ namespace MH
             }
             else if (ImGui::MenuItem("Save"))
             {
-               
+                if(current_path.size() != 0)
+                {
+                    auto content = serialize(*group);
+                    WriteFile(current_path, content);
+                }
             }
             else if (ImGui::MenuItem("Save As..."))
             {
@@ -94,6 +195,8 @@ namespace MH
             ImGui::NewLine();
             if (ImGui::Button("OK", ImVec2(120, 0)))
             {
+                current_path = pathBuf;
+                
                 group->clear();
                 auto curves = deserialize(pathBuf);
                 for(int i = 0; i < curves.size(); i++)
@@ -103,6 +206,37 @@ namespace MH
                     group->add_child(curves[i]);
                 }
                 
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            ImGui::EndPopup();
+        }
+        
+        if(action == 2)
+        {
+            ImGui::OpenPopup("Save As");
+        }
+        
+        if (ImGui::BeginPopupModal("Save As"))
+        {
+            ImGui::InputText("File Path", pathBuf, 256);
+            
+            ImGui::NewLine();
+            if (ImGui::Button("OK", ImVec2(120, 0)))
+            {
+                current_path = pathBuf;
+               
+                auto content = serialize(*group);
+                WriteFile(current_path, content);
+               
                 ImGui::CloseCurrentPopup();
                 action = -1;
             }
@@ -163,17 +297,16 @@ namespace MH
         ImGuiIO& io = ImGui::GetIO();
         ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
         
-        auto overlay_drawList = ImGui::GetOverlayDrawList();
+        auto overlay_drawList = ImGui::GetBackgroundDrawList();
         
         float circleRadius = 10.0f;
         float buttonBorder = 8.0f;
-        static int selectedIndex = -1;
-        static int selectedPointIndex = -1;
+        
         static bool isDragging = false;
         static bool transparent_open = true;
         
         ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::SetNextWindowPos(glm::vec2(0.0f, 18.0f));
+        ImGui::SetNextWindowPos(glm::vec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(io.DisplaySize);
         
         if (ImGui::Begin("Example: Simple overlay", &transparent_open,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings
@@ -181,6 +314,7 @@ namespace MH
                          ImGuiWindowFlags_NoFocusOnAppearing |
                          ImGuiWindowFlags_NoScrollbar |
                          ImGuiWindowFlags_NoNav
+                         | ImGuiWindowFlags_NoBringToFrontOnFocus
                          ))
         {
             for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
@@ -200,8 +334,12 @@ namespace MH
                     
                     std::string hashId = Format("%d_%d", curve_index, point_index);
                     
+                    bool button_pressed = false;
+                    
                     if(ImGui::InvisibleButton(hashId.c_str(), ImVec2((circleRadius + buttonBorder), (circleRadius + buttonBorder))))
                     {
+                        button_pressed = true;
+                        
                         if(ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_X)))
                         {
                             child->remove_control_point(point_index);
@@ -211,6 +349,12 @@ namespace MH
                             selectedIndex = curve_index;
                             selectedPointIndex = point_index;
                         }
+                    }
+                    
+                    if(ImGui::IsMouseClicked(1) && !button_pressed)
+                    {
+                        selectedIndex = -1;
+                        selectedPointIndex = -1;
                     }
                     
                     if (
@@ -261,6 +405,16 @@ namespace MH
         ImGui::End();
         
         auto pos = ImGui::GetIO().MousePos;
+        if(ImGui::IsMouseClicked(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_C)))
+        {
+            glm::vec3 worldPos = screen_to_world(pos);
+            worldPos = glm::vec3(worldPos.x, worldPos.y, 0.0f);
+            auto curve = std::make_shared<BSpline>();
+            curve->set_degree(2);
+            curve->add_control_point(worldPos);
+            group->add_child(curve);
+        }
+        
         if(ImGui::IsMouseClicked(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_Z)))
         {
             glm::vec3 worldPos = screen_to_world(pos);
@@ -276,6 +430,19 @@ namespace MH
             {
                 auto curve = group->get_child(curve_index);
                 auto& control_points = curve->get_control_points();
+                
+                if(control_points.size() == 1)
+                {
+                    float distance = glm::length(control_points[0] - worldPos);
+                    if(distance < minimum_distance)
+                    {
+                        minimum_distance = distance;
+                        minimum_curve_index = curve_index;
+                        minimum_edge_index = 0;
+                        minimum_side = 0;
+                    }
+                }
+                
                 for(int point_index = 0; point_index < control_points.size() - 1; point_index++)
                 {
                     auto point_a = control_points[point_index];
@@ -338,6 +505,7 @@ namespace MH
             }
         }
         
+        on_inspector();
         on_menu_bar();
     }
     

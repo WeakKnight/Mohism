@@ -21,6 +21,13 @@ namespace MH
         }
     private:
         void on_menu_bar();
+        void on_inspector();
+        
+        int selectedIndex = -1;
+        int selectedPointIndex = -1;
+        
+        std::string current_path = "";
+        
         Shader* defaultShader;
         Window* window;
         std::shared_ptr<CurveGroup> group;
