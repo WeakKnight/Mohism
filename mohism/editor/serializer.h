@@ -20,7 +20,14 @@ static std::string serialize(CurveGroup &bspline_group)
         
         for(int j = 0; j < control_points.size(); j++)
         {
-            res += Format("%f  %f  %f\n", control_points[j].x, control_points[j].y, control_points[j].z);
+            if(curve->get_dimension() == 3)
+            {
+                res += Format("%f  %f  %f\n", control_points[j].x, control_points[j].y, control_points[j].z);
+            }
+            else
+            {
+                res += Format("%f  %f\n", control_points[j].x, control_points[j].y);
+            }
         }
         
         res += Format("%d\n", 1);
@@ -30,6 +37,7 @@ static std::string serialize(CurveGroup &bspline_group)
         {
             res += Format("%f ", knot_vector[j]);
         }
+        
         res += "\n";
     }
 
@@ -60,6 +68,8 @@ static std::vector<std::shared_ptr<BSpline>> deserialize(const std::string &path
     while (std::getline(f, currentLine))
     {
         spdlog::debug("current line is {}", currentLine);
+        trim(currentLine);
+        
         if (currentLine.rfind("#", 0) == 0)
         {
             spdlog::debug("Comments Line");

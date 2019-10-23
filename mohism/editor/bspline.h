@@ -176,6 +176,18 @@ namespace MH
             else if(knot_vector.size() > used_knot_num)
             {
                 LOG_INFO("Extra knot vector, ok");
+                if(type == OPEN_KNOT_MODIFIED_UNIFORM_VECTOR)
+                {
+                    generate_modified_open_knot_uniform_vector();
+                }
+                else if(type == FLOATING_UNIFORM_VECTOR)
+                {
+                    generate_float_uniform_knot_vector();
+                }
+                else
+                {
+                    assert(false);
+                }
             }
             // not enough, regenerate knot vector
             else
@@ -254,11 +266,17 @@ namespace MH
             update_render_data();
             glBindVertexArray(VAO);
             // polygon
-            shader->setVec4("customColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-            glDrawArrays(GL_LINE_STRIP, 0, control_points.size());
-            
-            shader->setVec4("customColor", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-            glDrawArrays(GL_LINE_STRIP, control_points.size(), line_segments.size());
+            if(show_polygon)
+            {
+                shader->setVec4("customColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+                glDrawArrays(GL_LINE_STRIP, 0, control_points.size());
+            }
+            // the curve
+            if(show_curve)
+            {
+                shader->setVec4("customColor", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+                glDrawArrays(GL_LINE_STRIP, control_points.size(), line_segments.size());
+            }
         }
         
         void set_degree(int value)
@@ -283,7 +301,13 @@ namespace MH
         
         int get_dimension()
         {
-            return dimension;        }
+            return dimension;
+            
+        }
+        
+        bool show_polygon= true;
+        bool show_curve = true;
+        bool show_control_point = true;
         
     private:
         

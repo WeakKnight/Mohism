@@ -16,6 +16,9 @@ namespace MH
 //        -50.0f, -50.0f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
 //        0.0f,  50.0f, 0.0f,  0.0f, 0.0f, 1.0f    // top
 //    };
+    bool firstMouse = true;
+    float lastX =  800.0f / 2.0;
+    float lastY =  600.0 / 2.0;
     
 //    unsigned int VBO, VAO;
     Camera* camera = nullptr;
@@ -35,7 +38,37 @@ namespace MH
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera->process_keyboard(RIGHT, deltaTime);
     }
-
+    
+    void mouse_dragging(double xoffset, double yoffset)
+    {
+//        xoffset = -xoffset;
+        yoffset = - yoffset;
+        
+        if(camera == nullptr || camera->is_ortho)
+        {
+            return;
+        }
+        
+        float sensitivity = 0.1f; // change this value to your liking
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+       
+        camera->yaw += xoffset;
+        camera->pitch += yoffset;
+        
+        // make sure that when pitch is out of bounds, screen doesn't get flipped
+        if (camera->pitch > 89.0f)
+            camera->pitch = 89.0f;
+        if (camera->pitch < -89.0f)
+            camera->pitch = -89.0f;
+        
+        glm::vec3 front;
+        front.x = cos(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch));
+        front.y = sin(glm::radians(camera->pitch));
+        front.z = sin(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch));
+        camera->camera_front = glm::normalize(front);
+    }
+    
     void MainLayout::init()
     {
         group = std::make_shared<CurveGroup>();
@@ -56,24 +89,22 @@ namespace MH
     {
         static ImGuiWindowFlags toolboxFlag =  ImGuiWindowFlags_None;
         static bool* toolboxOpen = nullptr;
+        
+        static int camera_option = 1;
+        
         ImGui::Begin("Inspector", toolboxOpen, toolboxFlag);
         {
-            ImGui::BeginChild("left pane", ImVec2(170, 0), true);
-            
-            if(group->get_child_count() > 0 && selectedIndex != -1)
+            if(ImGui::RadioButton("Ortho", &camera_option, 1))
             {
-                auto curve = group->get_child(selectedIndex);
-                if(ImGui::Button("degree raise"))
-                {
-                    curve->set_degree(curve->get_degree() + 1);
-                    curve->mark_need_update();
-                }
-                if(ImGui::Button("degree decline"))
-                {
-                    curve->set_degree(curve->get_degree() - 1);
-                    curve->mark_need_update();
-                }
+                camera->set_ortho(true);
             }
+            ImGui::SameLine();
+            if(ImGui::RadioButton("Perspective", &camera_option, 0))
+            {
+                camera->set_ortho(false);
+            }
+            
+            ImGui::BeginChild("left pane", ImVec2(170, 0), true);
             
             static char label[128];
             
@@ -89,60 +120,137 @@ namespace MH
             ImGui::EndChild();
             ImGui::SameLine();
             ImGui::BeginChild("mid pane", ImVec2(210, 0), true);
-            if(group->get_child_count() > 0 && selectedIndex != -1)
+            if (ImGui::BeginTabBar("##Tabs", ImGuiTabBarFlags_None))
             {
-                auto curve = group->get_child(selectedIndex);
-                auto& control_points = curve->get_control_points();
-                
-                for(size_t i = 0; i < control_points.size(); i++)
+                if (ImGui::BeginTabItem("Control Point"))
                 {
-                    if(ImGui::InputFloat3(Format("#%d", (int)i).c_str(), &(control_points[i][0])))
+                    if(group->get_child_count() > 0 && selectedIndex != -1)
                     {
-                        curve->mark_need_update();
+                        auto curve = group->get_child(selectedIndex);
+                        auto& control_points = curve->get_control_points();
+                        
+                        for(size_t i = 0; i < control_points.size(); i++)
+                        {
+                            if(ImGui::InputFloat3(Format("#%d", (int)i).c_str(), &(control_points[i][0])))
+                            {
+                                curve->mark_need_update();
+                            }
+                            ImGui::SameLine();
+                            ImGui::PushID(i);
+                            if(ImGui::Button("X"))
+                            {
+                                curve->remove_control_point(i);
+                            }
+                            ImGui::PopID();
+                        }
                     }
-                    ImGui::SameLine();
-                    ImGui::PushID(i);
-                    if(ImGui::Button("X"))
-                    {
-                        curve->remove_control_point(i);
-                    }
-                    ImGui::PopID();
+                    ImGui::EndTabItem();
                 }
-            }
-            ImGui::EndChild();
-            ImGui::SameLine();
-            ImGui::BeginChild("right pane", ImVec2(165, 0), true);
-            if(group->get_child_count() > 0 && selectedIndex != -1)
-            {
-                auto curve = group->get_child(selectedIndex);
-                auto& knot_vector = curve->get_knot_vector();
-                
-                if(ImGui::Button("OpenModified"))
+                if (ImGui::BeginTabItem("Knot Vector"))
                 {
-                    curve->generate_modified_open_knot_uniform_vector();
-                    curve->mark_need_update();
-                }
-                
-                if(ImGui::Button("Floating"))
-                {
-                    curve->generate_float_uniform_knot_vector();
-                    curve->mark_need_update();
-                }
-                
-                for(size_t i = 0; i < knot_vector.size(); i++)
-                {
-                    if(ImGui::InputFloat(Format("#%d", (int)i).c_str(), &(knot_vector[i])))
+                    if(group->get_child_count() > 0 && selectedIndex != -1)
                     {
-                        curve->mark_need_update();
+                        auto curve = group->get_child(selectedIndex);
+                        auto& knot_vector = curve->get_knot_vector();
+                        
+                        if(ImGui::Button("OpenModified"))
+                        {
+                            curve->generate_modified_open_knot_uniform_vector();
+                            curve->mark_need_update();
+                        }
+                        
+                        if(ImGui::Button("Floating"))
+                        {
+                            curve->generate_float_uniform_knot_vector();
+                            curve->mark_need_update();
+                        }
+                        
+                        for(size_t i = 0; i < knot_vector.size(); i++)
+                        {
+                            if(ImGui::InputFloat(Format("#%d", (int)i).c_str(), &(knot_vector[i])))
+                            {
+                                curve->mark_need_update();
+                            }
+                            ImGui::SameLine();
+                            ImGui::PushID(i);
+                            if(ImGui::Button("X"))
+                            {
+                                curve->remove_knot_vector(i);
+                            }
+                            ImGui::PopID();
+                        }
                     }
-                    ImGui::SameLine();
-                    ImGui::PushID(i);
-                    if(ImGui::Button("X"))
-                    {
-                        curve->remove_knot_vector(i);
-                    }
-                    ImGui::PopID();
+                    ImGui::EndTabItem();
                 }
+                if (ImGui::BeginTabItem("Misc"))
+                {
+                    static bool all_show_curve = true;
+                    static bool all_show_control_point = true;
+                    static bool all_show_polygon = true;
+                    
+                    if(ImGui::Button("All Curve Display"))
+                    {
+                        all_show_curve = !all_show_curve;
+                        for(int index = 0; index < group->get_child_count(); index++)
+                        {
+                            auto curve = group->get_child(index);
+                            curve->show_curve = all_show_curve;
+                        }
+                    }
+                    if(ImGui::Button("All Point Display"))
+                    {
+                        all_show_control_point = !all_show_control_point;
+                        for(int index = 0; index < group->get_child_count(); index++)
+                        {
+                            auto curve = group->get_child(index);
+                            curve->show_control_point = all_show_control_point;
+                        }
+                    }
+                    if(ImGui::Button("All Polygon Display"))
+                    {
+                        all_show_polygon = !all_show_polygon;
+                        for(int index = 0; index < group->get_child_count(); index++)
+                        {
+                            auto curve = group->get_child(index);
+                            curve->show_polygon = all_show_polygon;
+                        }
+                    }
+                    
+                    if(group->get_child_count() > 0 && selectedIndex != -1)
+                    {
+                        auto curve = group->get_child(selectedIndex);
+                        
+                        if(ImGui::Button("Delete"))
+                        {
+                            group->remove_bspline(selectedIndex);
+                            selectedIndex = -1;
+                        }
+                        
+                        ImGui::Checkbox("Curve Display", &curve->show_curve);
+                        ImGui::Checkbox("Point Display", &curve->show_control_point);
+                        ImGui::Checkbox("Polygon Display", &curve->show_polygon);
+                        
+                        if(ImGui::Button("degree raise"))
+                        {
+                            curve->set_degree(curve->get_degree() + 1);
+                            curve->mark_need_update();
+                        }
+                        if(ImGui::Button("degree decline"))
+                        {
+                            curve->set_degree(curve->get_degree() - 1);
+                            curve->mark_need_update();
+                        }
+                        
+                        static bool is_2d = true;
+                        if(ImGui::Checkbox("2D", &is_2d))
+                        {
+                            curve->set_dimension(is_2d?2:3);
+                        }
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
             }
             ImGui::EndChild();
         }
@@ -254,7 +362,7 @@ namespace MH
     
     void MainLayout::on_imgui()
     {
-        glm::mat4 view = camera->transformation.get_view_matrix();
+        glm::mat4 view = camera->transformation.look_at(camera->camera_front);
         glm::mat4 projection = camera->projection;
         auto viewInverse = glm::inverse(view);
         auto projectionInverse = glm::inverse(projection);
@@ -284,14 +392,13 @@ namespace MH
         
         auto world_to_screen = [&view, &projection, this](glm::vec3 world_pos)
         {
-            auto screen_space = projection * view * glm::vec4(world_pos, 1.0f);
-            return glm::vec2(
-                             screen_space.x * (window->get_width() * 0.5f) + window->get_width() * 0.5f,
-                             -1.0f * screen_space.y * (window->get_height() * 0.5f) + window->get_height() * 0.5f
-            );
+            auto clipSpacePos = projection * (view * glm::vec4(world_pos, 1.0f));
+            auto ndcSpacePos = glm::vec3(clipSpacePos.x, clipSpacePos.y, clipSpacePos.z) / clipSpacePos.w;
+            glm::vec2 windowSpacePos = ((glm::vec2(ndcSpacePos.x, -ndcSpacePos.y) + 1.0f) / 2.0f) * glm::vec2(window->get_width(), window->get_height());
+            return windowSpacePos;
         };
         
-        ImGuizmo::SetOrthographic(true);
+        ImGuizmo::SetOrthographic(camera->is_ortho);
         ImGuizmo::BeginFrame();
         
         ImGuiIO& io = ImGui::GetIO();
@@ -327,7 +434,10 @@ namespace MH
                     auto point = control_points[point_index];
                     
                     auto screen_pos = world_to_screen(point);
-                    overlay_drawList->AddCircle(screen_pos, circleRadius, IM_COL32(255, 255, 255, 255));
+                    if(child->show_control_point)
+                    {
+                        overlay_drawList->AddCircle(screen_pos, circleRadius, IM_COL32(255, 255, 255, 255));
+                    }
                     
                     ImGui::SetCursorScreenPos(screen_pos
                                               - glm::vec2(0.5f * (circleRadius + buttonBorder), 0.5f * (circleRadius + buttonBorder)));
@@ -403,6 +513,13 @@ namespace MH
             }
         }
         ImGui::End();
+        
+        if(ImGui::IsMouseDragging(1))
+        {
+            auto delta = (io.MouseDelta);
+            mouse_dragging(delta.x, delta.y);
+        }
+        
         
         auto pos = ImGui::GetIO().MousePos;
         if(ImGui::IsMouseClicked(0) && ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_C)))
@@ -517,7 +634,7 @@ namespace MH
 
         process_input((GLFWwindow *)window->get_native_window());
 
-        glm::mat4 view = camera->transformation.get_view_matrix();
+        glm::mat4 view = camera->transformation.look_at(camera->camera_front);
         glm::mat4 projection = camera->projection;
         
         // rendering

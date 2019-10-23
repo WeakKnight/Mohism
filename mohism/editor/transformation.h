@@ -53,6 +53,11 @@ namespace MH
         {
             return position;
         }
+        
+        glm::mat4 look_at(glm::vec3 dir)
+        {
+            return glm::lookAt(position, position + dir, up);
+        }
 
         glm::mat4 get_view_matrix() const
         {
