@@ -14,7 +14,14 @@ static std::string serialize(CurveGroup &bspline_group)
     for(int i = 0; i < bspline_group.get_child_count(); i++)
     {
         auto curve = bspline_group.get_child(i);
-        res += Format("%d\n", curve->get_degree());
+        if(curve->is_special_color)
+        {
+            res += Format("%d Green\n", curve->get_degree());
+        }
+        else
+        {
+            res += Format("%d\n", curve->get_degree());
+        }
         auto& control_points = curve->get_control_points();
         res += Format("%d\n", control_points.size());
         
@@ -117,11 +124,16 @@ static std::vector<std::shared_ptr<BSpline>> deserialize(const std::string &path
             }
             else if (type == 1)
             {
-                // curve point count announcement
+                // curve degree announcement
                 auto degree = std::stoi(tokens[0]);
                 current_bspline = std::make_shared<BSpline>();
                 
                 current_bspline->set_degree(degree);
+                
+                if(tokens.size() == 2)
+                {
+                    current_bspline->is_special_color = true;
+                }
 
                 result.push_back(current_bspline);
                 type = 5;

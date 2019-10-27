@@ -230,6 +230,8 @@ namespace MH
                         ImGui::Checkbox("Point Display", &curve->show_control_point);
                         ImGui::Checkbox("Polygon Display", &curve->show_polygon);
                         
+                        ImGui::Checkbox("Special Color", &curve->is_special_color);
+                        
                         if(ImGui::Button("degree raise"))
                         {
                             curve->set_degree(curve->get_degree() + 1);
@@ -245,6 +247,43 @@ namespace MH
                         if(ImGui::Checkbox("2D", &is_2d))
                         {
                             curve->set_dimension(is_2d?2:3);
+                        }
+                        
+                        if(ImGui::Button("Duplicate"))
+                        {
+                            auto newCurve = group->add_empty_bspline();
+                            newCurve->set_degree(curve->get_degree());
+                            newCurve->set_dimension(curve->get_dimension());
+                            newCurve->add_knot_vector(curve->get_knot_vector());
+                            newCurve->add_control_points(curve->get_control_points());
+                            newCurve->is_special_color = curve->is_special_color;
+                        }
+                        
+                        static float whole_curve_move = 0.0f;
+                        ImGui::InputFloat("Move Delta", &whole_curve_move);
+                        if(ImGui::Button("Right"))
+                        {
+                            auto& controlPoints = curve->get_control_points();
+                            auto& control_point_matrixes = curve->get_control_point_matrixes();
+                            
+                            for(int i = 0; i < controlPoints.size(); i++)
+                            {
+                                controlPoints[i] += (glm::vec3(1.0f, 0.0f, 0.0f) * whole_curve_move);
+                                control_point_matrixes[i] = glm::translate(glm::mat4(1.0f), controlPoints[i]);
+                            }
+                            curve->mark_need_update();
+                        }
+                        if(ImGui::Button("Top"))
+                        {
+                            auto& controlPoints = curve->get_control_points();
+                            auto& control_point_matrixes = curve->get_control_point_matrixes();
+                            
+                            for(int i = 0; i < controlPoints.size(); i++)
+                            {
+                                controlPoints[i] += (glm::vec3(0.0f, 1.0f, 0.0f) * whole_curve_move);
+                                control_point_matrixes[i] = glm::translate(glm::mat4(1.0f), controlPoints[i]);
+                            }
+                            curve->mark_need_update();
                         }
                     }
                     ImGui::EndTabItem();
@@ -543,8 +582,10 @@ namespace MH
             // -1 = left, 0 = inside, 1 = right
             int minimum_side = 0;
             
-            for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
+            //for(int curve_index = 0; curve_index < group->get_child_count(); curve_index++)
+            if(selectedIndex != -1)
             {
+                auto curve_index = selectedIndex;
                 auto curve = group->get_child(curve_index);
                 auto& control_points = curve->get_control_points();
                 

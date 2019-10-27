@@ -268,13 +268,20 @@ namespace MH
             // polygon
             if(show_polygon)
             {
-                shader->setVec4("customColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+                shader->setVec4("customColor", glm::vec4(0.3f, 0.0f, 0.52f, 1.0f));
                 glDrawArrays(GL_LINE_STRIP, 0, control_points.size());
             }
             // the curve
             if(show_curve)
             {
-                shader->setVec4("customColor", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+                if(is_special_color)
+                {
+                    shader->setVec4("customColor", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+                }
+                else
+                {
+                    shader->setVec4("customColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                }
                 glDrawArrays(GL_LINE_STRIP, control_points.size(), line_segments.size());
             }
         }
@@ -308,6 +315,7 @@ namespace MH
         bool show_polygon= true;
         bool show_curve = true;
         bool show_control_point = true;
+        bool is_special_color = false;
         
     private:
         
@@ -317,7 +325,7 @@ namespace MH
             return result;
         }
         
-        void sample_line_segments(int sample_count = 200)
+        void sample_line_segments(int sample_count = 300)
         {
             line_segments.clear();
             

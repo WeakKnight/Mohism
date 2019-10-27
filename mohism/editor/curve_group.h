@@ -10,6 +10,13 @@ namespace MH
     {
     public:
         
+        std::shared_ptr<BSpline> add_empty_bspline()
+        {
+            auto new_bspline = std::make_shared<BSpline>();
+            bsplines.push_back(new_bspline);
+            return new_bspline;
+        }
+        
         std::shared_ptr<BSpline> add_bspline(glm::vec3 origin = glm::vec3(0.0f, 0.0f, 0.0f))
         {
             auto new_bspline = std::make_shared<BSpline>();
