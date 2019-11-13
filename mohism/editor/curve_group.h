@@ -101,8 +101,8 @@ namespace MH
             return glm::vec4(minX, maxX, minY, maxY);
         }
         
+        std::vector<std::shared_ptr<BSplineSurface>> bspline_surfaces;
     private:
         std::vector<std::shared_ptr<BSpline>> bsplines;
-        std::vector<std::shared_ptr<BSplineSurface>> bspline_surfaces;
     };
 } // namespace MH

@@ -321,7 +321,7 @@ namespace MH
             }
             else if (ImGui::MenuItem("Test Surface"))
             {
-                auto test_surfaces = deserialize_surface("surface.dat");
+                auto test_surfaces = deserialize_surface("surface1.dat");
                 for(int i = 0; i < test_surfaces.size(); i++)
                 {
                     auto surface = test_surfaces[i];
@@ -703,6 +703,12 @@ namespace MH
             for(int i = 0; i < group->get_child_count(); i++)
             {
                 auto child = group->get_child(i);
+                child->draw(defaultShader);
+            }
+            
+            for(int i = 0; i < group->bspline_surfaces.size(); i++)
+            {
+                auto child = group->bspline_surfaces[i];
                 child->draw(defaultShader);
             }
 //            bspline->draw();

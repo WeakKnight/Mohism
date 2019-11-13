@@ -212,6 +212,7 @@ static std::vector<std::shared_ptr<BSplineSurface>> deserialize_surface(const st
                     currentY++;
                     if(currentY > m)
                     {
+                        current_bspline_surface->compute_derived_date();
                         // next surface
                         type = 1;
                     }
