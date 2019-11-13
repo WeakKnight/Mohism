@@ -10,6 +10,7 @@ namespace MH
     {
     public:
         
+        
         std::shared_ptr<BSpline> add_empty_bspline()
         {
             auto new_bspline = std::make_shared<BSpline>();
@@ -54,12 +55,54 @@ namespace MH
             bsplines.push_back(bspline);
         }
         
+        void add_child(std::shared_ptr<BSplineSurface> bspline_surface)
+        {
+            bspline_surfaces.push_back(bspline_surface);
+        }
+        
         void clear()
         {
             bsplines.clear();
+            bspline_surfaces.clear();
+        }
+        
+        glm::vec4 caculate_bounding_box()
+        {
+            float minX = 9999999.9f;
+            float minY = 9999999.9f;
+            float maxX = -999999.9f;
+            float maxY = -999999.9f;
+            
+            for(size_t index = 0; index < bsplines.size(); index++)
+            {
+                auto& controlPoints = bsplines[index]->get_control_points();
+                for(size_t point_index = 0; point_index < controlPoints.size(); point_index++)
+                {
+                    auto point = controlPoints[point_index];
+                    if(point.x > maxX)
+                    {
+                        maxX = point.x;
+                    }
+                    if(point.x < minX)
+                    {
+                        minX = point.x;
+                    }
+                    if(point.y > maxY)
+                    {
+                        maxY = point.y;
+                    }
+                    if(point.y < minY)
+                    {
+                        minY = point.y;
+                    }
+                }
+            }
+            
+            return glm::vec4(minX, maxX, minY, maxY);
         }
         
     private:
         std::vector<std::shared_ptr<BSpline>> bsplines;
+        std::vector<std::shared_ptr<BSplineSurface>> bspline_surfaces;
     };
 } // namespace MH

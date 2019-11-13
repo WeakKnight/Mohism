@@ -444,4 +444,21 @@ namespace MH
         unsigned int VAO;
         unsigned int VBO;
     };
+    
+    class BSplineSurface
+    {
+    public:
+        // m
+        std::vector<float> knot_u;
+        // n
+        std::vector<float> knot_v;
+        // m x n
+        std::vector<glm::vec3> control_points;
+        
+        int degree_u;
+        int degree_v;
+        
+        int knot_length_u;
+        int knot_length_v;
+    };
 } // namespace MH

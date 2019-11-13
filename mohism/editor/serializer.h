@@ -10,7 +10,17 @@ namespace MH
 static std::string serialize(CurveGroup &bspline_group)
 {
     std::string res = "";
-    res += Format("%d\n", bspline_group.get_child_count());
+    res += Format("%d", bspline_group.get_child_count());
+    auto bounding_box = bspline_group.caculate_bounding_box();
+    auto width = bounding_box.y - bounding_box.x;
+    auto height = bounding_box.w - bounding_box.z;
+    
+    // 3 inches width
+    auto W = 3.6f;
+    auto H = (W * height) / width;
+    
+    res += Format(" %f %f %f %f\n", W * -0.5f, W * 0.5f, H * -0.5f, H * 0.5f);
+    
     for(int i = 0; i < bspline_group.get_child_count(); i++)
     {
         auto curve = bspline_group.get_child(i);
@@ -49,6 +59,168 @@ static std::string serialize(CurveGroup &bspline_group)
     }
 
     return res;
+}
+    
+static std::vector<std::shared_ptr<BSplineSurface>> deserialize_surface(const std::string &path)
+{
+    auto content = ReadFile(path);
+    if (content.size() == 0)
+    {
+        content = ReadFile("assets/" + path);
+    }
+    
+    std::vector<std::shared_ptr<BSplineSurface>> result;
+    
+    std::istringstream f(content);
+    std::string currentLine;
+    
+    std::shared_ptr<BSplineSurface> current_bspline_surface;
+    int currentX = 0;
+    int currentY = 0;
+    int type = 0;
+    
+    // 0 curve count
+    // 1 point count announce
+    // 2 point announce
+    
+    while (std::getline(f, currentLine))
+    {
+        spdlog::debug("current line is {}", currentLine);
+        trim(currentLine);
+        
+        if (currentLine.rfind("#", 0) == 0)
+        {
+            spdlog::debug("Comments Line");
+        }
+        else if (currentLine.size() == 0)
+        {
+            spdlog::debug("Empty Line");
+        }
+        else if (currentLine[0] == '\r')
+        {
+            spdlog::debug("Empty Line");
+        }
+        else
+        {
+            std::vector<std::string> tokens;
+            std::string res = "";
+            
+            for (size_t i = 0; i < currentLine.size(); i++)
+            {
+                if (currentLine[i] != ' ')
+                {
+                    res += currentLine[i];
+                }
+                else
+                {
+                    if (res.size() != 0)
+                    {
+                        tokens.push_back(res);
+                    }
+                    res = "";
+                }
+            }
+            
+            if (res.size() != 0)
+            {
+                tokens.push_back(res);
+            }
+            
+            spdlog::debug("Token Count: {}", tokens.size());
+            
+            // surface count announce
+            if (type == 0)
+            {
+                type = 1;
+            }
+            // degree announce
+            else if (type == 1)
+            {
+                auto degree_u = std::stoi(tokens[0]);
+                auto degree_v = std::stoi(tokens[1]);
+                
+                current_bspline_surface = std::make_shared<BSplineSurface>();
+                current_bspline_surface->degree_u = degree_u;
+                current_bspline_surface->degree_v = degree_v;
+                
+                result.push_back(current_bspline_surface);
+                
+                type = 2;
+            }
+            // knot length announce
+            else if (type == 2)
+            {
+                auto knot_length_u = std::stoi(tokens[0]);
+                auto knot_length_v = std::stoi(tokens[1]);
+                
+                current_bspline_surface->knot_length_u = knot_length_u;
+                current_bspline_surface->knot_length_v = knot_length_v;
+                
+                type = 3;
+            }
+            // u knot
+            else if (type == 3)
+            {
+                for(int i = 0; i < tokens.size(); i++)
+                {
+                    if(tokens[i].size() == 1)
+                    {
+                        if(tokens[i][0] == '\r')
+                        {
+                            break;
+                        }
+                    }
+                    
+                    auto knotValue = std::stof(tokens[i]);
+                    current_bspline_surface->knot_u.push_back(knotValue);
+                }
+                type = 4;
+            }
+            // v knot
+            else if (type == 4)
+            {
+                for(int i = 0; i < tokens.size(); i++)
+                {
+                    if(tokens[i].size() == 1)
+                    {
+                        if(tokens[i][0] == '\r')
+                        {
+                            break;
+                        }
+                    }
+                    
+                    auto knotValue = std::stof(tokens[i]);
+                    current_bspline_surface->knot_v.push_back(knotValue);
+                }
+                
+                currentX = 0;
+                currentY = 0;
+                type = 5;
+            }
+            // control points, 0,0 0,1 0,n, 1,0 1,1 1,n m,0 m,1 m,n
+            else if (type == 5)
+            {
+                int n = current_bspline_surface->knot_length_v - current_bspline_surface->degree_v - 1 - 1;
+                int m = current_bspline_surface->knot_length_u - current_bspline_surface->degree_u - 1 - 1;
+                
+                glm::vec3 point = glm::vec3(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]));
+                current_bspline_surface->control_points.push_back(point);
+                currentX++;
+                if(currentX > n)
+                {
+                    currentX = 0;
+                    currentY++;
+                    if(currentY > m)
+                    {
+                        // next surface
+                        type = 1;
+                    }
+                }
+            }
+        }
+    }
+    
+    return result;
 }
 
 static std::vector<std::shared_ptr<BSpline>> deserialize(const std::string &path)

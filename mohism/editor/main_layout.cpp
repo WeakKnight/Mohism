@@ -319,6 +319,15 @@ namespace MH
             {
                 action = 2;
             }
+            else if (ImGui::MenuItem("Test Surface"))
+            {
+                auto test_surfaces = deserialize_surface("surface.dat");
+                for(int i = 0; i < test_surfaces.size(); i++)
+                {
+                    auto surface = test_surfaces[i];
+                    group->add_child(surface);
+                }
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
