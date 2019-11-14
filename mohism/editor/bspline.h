@@ -223,6 +223,20 @@ namespace MH
             domain.push_back(t(N() - k()));
         }
         
+        void calculate_jmax()
+        {
+            for(int i = 0; i < knot_vector.size() - 1; i++)
+            {
+                if(t(i) < t(i+1))
+                {
+                    if(i > j_max)
+                    {
+                        j_max = i;
+                    }
+                }
+            }
+        }
+        
         void update_render_data()
         {
             if(need_updated)
@@ -326,35 +340,6 @@ namespace MH
             return result;
         }
         
-        bool show_polygon= true;
-        bool show_curve = true;
-        bool show_control_point = true;
-        bool is_special_color = false;
-        
-    private:
-        
-        glm::mat4 calculate_control_point_matrix(glm::vec3 point)
-        {
-            auto result = glm::translate(glm::mat4(1.0f), point);
-            return result;
-        }
-        
-        void sample_line_segments(int sample_count = 300)
-        {
-            line_segments.clear();
-            
-            float domain_length = domain[1] - domain[0];
-            
-            float delta = domain_length / (float)(sample_count + 2);
-            
-            line_segments.push_back(evaluate(domain[0]));
-            for(int i = 1; i <= sample_count; i ++)
-            {
-                line_segments.push_back(evaluate(domain[0] + (i) * delta));
-            }
-            line_segments.push_back(evaluate(domain[1]));
-        }
-        
         float blending_func(int i, int _k, float _t)
         {
             if(_k == 0)
@@ -404,6 +389,37 @@ namespace MH
                 }
             }
         }
+        
+        bool show_polygon= true;
+        bool show_curve = true;
+        bool show_control_point = true;
+        bool is_special_color = false;
+        
+    private:
+        
+        glm::mat4 calculate_control_point_matrix(glm::vec3 point)
+        {
+            auto result = glm::translate(glm::mat4(1.0f), point);
+            return result;
+        }
+        
+        void sample_line_segments(int sample_count = 300)
+        {
+            line_segments.clear();
+            
+            float domain_length = domain[1] - domain[0];
+            
+            float delta = domain_length / (float)(sample_count + 2);
+            
+            line_segments.push_back(evaluate(domain[0]));
+            for(int i = 1; i <= sample_count; i ++)
+            {
+                line_segments.push_back(evaluate(domain[0] + (i) * delta));
+            }
+            line_segments.push_back(evaluate(domain[1]));
+        }
+        
+        
         
         inline int N()
         {
@@ -478,12 +494,13 @@ namespace MH
         {
             compute_domain();
             compute_grid();
+            compute_model_spline();
             compute_segments();
         }
         
         void draw(Shader* shader)
         {
-            draw_grid(shader);
+            // draw_grid(shader);
             
             glBindVertexArray(VAO);
             shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
@@ -491,7 +508,36 @@ namespace MH
             glBindVertexArray(0);
         }
         
+        glm::vec3 evaluate(float u, float v)
+        {
+            int n = knot_length_v - degree_v - 1 - 1;
+            int m = knot_length_u - degree_u - 1 - 1;
+            
+            glm::vec3 result = glm::vec3(0.0f, 0.0f, 0.0f);
+            
+            for(int i = 0; i <= m; i++)
+            {
+                for(int j = 0; j <= n; j++)
+                {
+                    
+                    result +=
+                    P(i, j) * model_u->blending_func(i, model_u->get_degree(), u)
+                    * model_v->blending_func(j, model_v->get_degree(), v);
+                }
+            }
+            
+            return result;
+        }
+        
     private:
+        
+        glm::vec3 P(int i, int j)
+        {
+            int n = knot_length_v - degree_v - 1 - 1;
+            int width = n + 1;
+            
+            return control_points[width * i + j];
+        }
         
         void draw_grid(Shader* shader)
         {
@@ -547,52 +593,53 @@ namespace MH
             }
         }
         
-        void compute_segments(int sub_u = 20, int sub_v = 20)
+        void compute_model_spline()
+        {
+            model_u = std::make_shared<BSpline>();
+            model_u->set_degree(degree_u);
+            model_u->add_knot_vector(knot_u);
+            model_u->calculate_jmax();
+            
+            model_v = std::make_shared<BSpline>();
+            model_v->set_degree(degree_v);
+            model_v->add_knot_vector(knot_v);
+            model_v->calculate_jmax();
+        }
+        
+        void compute_segments(int sub_u = 50, int sub_v = 50)
         {
             float length_u = domain_u.y - domain_u.x;
             float step_u = length_u / (float)sub_u;
             
-            for(int step_index = 0; step_index <= sub_u; step_index++)
+            float length_v = domain_v.y - domain_v.x;
+            float step_v = length_v / (float)sub_v;
+            
+            for(int step_index_u = 0; step_index_u <= sub_u; step_index_u++)
             {
-                float u = domain_u.x + step_u * step_index;
-                if(step_index == sub_u)
+                float u = domain_u.x + step_u * step_index_u;
+                for(int step_index_v = 0; step_index_v < sub_v; step_index_v++)
                 {
-                    u = domain_u.y;
-                }
-                
-                for(int i = 0; i < grid_column.size() - 1; i++)
-                {
-                    auto column_spline = grid_column[i];
-                    auto next_column_spline = grid_column[i + 1];
-                    // this point
-                    auto a = column_spline->evaluate(u);
-                    // next point
-                    auto b = next_column_spline->evaluate(u);
+                    float v = domain_v.x + step_v * step_index_v;
+                    float next_v = domain_v.x + step_v * (step_index_v + 1);
+                    
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(u, next_v);
                     
                     segments.push_back(a);
                     segments.push_back(b);
                 }
             }
             
-            float length_v = domain_v.y - domain_v.x;
-            float step_v = length_v / (float)sub_v;
-            
-            for(int step_index = 0; step_index <= sub_v; step_index++)
+            for(int step_index_v = 0; step_index_v <= sub_v; step_index_v++)
             {
-                float v = domain_v.x + step_v * step_index;
-                if(step_index == sub_v)
+                float v = domain_v.x + step_v * step_index_v;
+                for(int step_index_u = 0; step_index_u < sub_u; step_index_u++)
                 {
-                    v = domain_v.y;
-                }
-                
-                for(int i = 0; i < grid_row.size() - 1; i++)
-                {
-                    auto row_spline = grid_row[i];
-                    auto next_row_spline = grid_row[i + 1];
-                    // this point
-                    auto a = row_spline->evaluate(v);
-                    // next point
-                    auto b = next_row_spline->evaluate(v);
+                    float u = domain_u.x + step_u * step_index_u;
+                    float next_u = domain_u.x + step_u * (step_index_u + 1);
+                    
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(next_u, v);
                     
                     segments.push_back(a);
                     segments.push_back(b);
@@ -664,6 +711,9 @@ namespace MH
         
         unsigned int VAO;
         unsigned int VBO;
+        
+        std::shared_ptr<BSpline> model_u;
+        std::shared_ptr<BSpline> model_v;
 //        std::vector<std::shared_ptr<BSpline>> segment_v;
     };
 } // namespace MH
