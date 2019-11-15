@@ -203,8 +203,18 @@ static std::vector<std::shared_ptr<BSplineSurface>> deserialize_surface(const st
                 int n = current_bspline_surface->knot_length_v - current_bspline_surface->degree_v - 1 - 1;
                 int m = current_bspline_surface->knot_length_u - current_bspline_surface->degree_u - 1 - 1;
                 
-                glm::vec3 point = glm::vec3(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]));
-                current_bspline_surface->control_points.push_back(point);
+                if(tokens.size() >= 4 && tokens[3][0] != '\r')
+                {
+                    glm::vec4 point = glm::vec4(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]));
+                    current_bspline_surface->control_points.push_back(point);
+                }
+                else
+                {
+                    glm::vec4 point = glm::vec4(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]), 1.0f);
+                    current_bspline_surface->control_points.push_back(point);
+                }
+                
+               
                 currentX++;
                 if(currentX > n)
                 {

@@ -482,7 +482,7 @@ namespace MH
         // n
         std::vector<float> knot_v;
         // m x n
-        std::vector<glm::vec3> control_points;
+        std::vector<glm::vec4> control_points;
         
         int degree_u;
         int degree_v;
@@ -519,19 +519,44 @@ namespace MH
             {
                 for(int j = 0; j <= n; j++)
                 {
-                    
-                    result +=
-                    P(i, j) * model_u->blending_func(i, model_u->get_degree(), u)
-                    * model_v->blending_func(j, model_v->get_degree(), v);
+                    glm::vec4 control_point = P(i, j);
+                    glm::vec3 control_point_3d = glm::vec3(control_point.x, control_point.y, control_point.z);
+                    result += (blending(i, j, u, v) * control_point_3d);
                 }
             }
             
+            // return (result / bottom_factor);
             return result;
         }
         
     private:
         
-        glm::vec3 P(int i, int j)
+        float blending(int i, int j, float u, float v)
+        {
+            int n = knot_length_v - degree_v - 1 - 1;
+            int m = knot_length_u - degree_u - 1 - 1;
+            float bottom = 0.0f;
+            for(int ii = 0; ii <= m; ii++)
+            {
+                for(int jj = 0; jj <= n; jj++)
+                {
+                    
+                    glm::vec4 control_point_ii_jj = P(ii, jj);
+                    float scaler_ii_jj = control_point_ii_jj.w;
+                    bottom += (scaler_ii_jj * model_u->blending_func(ii, model_u->get_degree(), u)
+                    * model_v->blending_func(jj, model_v->get_degree(), v));
+                }
+            }
+            
+            glm::vec4 control_point = P(i, j);
+            float scaler_i_j = control_point.w;
+            float top = scaler_i_j * model_u->blending_func(i, model_u->get_degree(), u)
+            * model_v->blending_func(j, model_v->get_degree(), v);
+            
+            return top / bottom;
+        }
+        
+        glm::vec4 P(int i, int j)
         {
             int n = knot_length_v - degree_v - 1 - 1;
             int width = n + 1;
@@ -606,7 +631,7 @@ namespace MH
             model_v->calculate_jmax();
         }
         
-        void compute_segments(int sub_u = 50, int sub_v = 50)
+        void compute_segments(int sub_u = 150, int sub_v = 150)
         {
             float length_u = domain_u.y - domain_u.x;
             float step_u = length_u / (float)sub_u;

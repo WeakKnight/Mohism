@@ -321,7 +321,7 @@ namespace MH
             }
             else if (ImGui::MenuItem("Test Surface"))
             {
-                auto test_surfaces = deserialize_surface("surface1.dat");
+                auto test_surfaces = deserialize_surface("surface_c.dat");
                 for(int i = 0; i < test_surfaces.size(); i++)
                 {
                     auto surface = test_surfaces[i];
