@@ -633,6 +633,35 @@ namespace MH
         
         void compute_segments(int sub_u = 150, int sub_v = 150)
         {
+            // computer u star v star using surface
+            int n = knot_length_v - degree_v - 1 - 1;
+            int m = knot_length_u - degree_u - 1 - 1;
+            spdlog::info("n:{} m:{}", n, m);
+            for(int i = 0; i <= m - 1; i++)
+            {
+                for(int j = 0; j <= n - 1; j++)
+                {
+                    auto sth = evaluate(u_star(i), v_star(j));
+                    auto control_point = P(i, j);
+//                    spdlog::info("control_point x:{} y:{} z:{}", control_point.x, control_point.y, control_point.z);
+                    glm::vec4 normal;
+                    if(sth.z < 2.0f)
+                    {
+                        normal = glm::vec4(sth.x, sth.y, 0.0f, 0.0);
+//                        spdlog::info("normal point x:{} y:{} z:{}", sth.x, sth.y, 0.0f);
+                    }
+                    else
+                    {
+                        normal = glm::vec4(sth.x, sth.y, sth.z - 2.0f, 0.0);
+//                        spdlog::info("normal point x:{} y:{} z:{}", sth.x, sth.y, sth.z - 2.0f);
+                    }
+                    float offset = 1.0;
+                    auto new_control_point = control_point + offset * normal;
+                    spdlog::info("{} {} {} {}", new_control_point.x, new_control_point.y, new_control_point.z, new_control_point.w);
+                }
+                spdlog::info("Hello");
+            }
+            
             float length_u = domain_u.y - domain_u.x;
             float step_u = length_u / (float)sub_u;
             
@@ -686,6 +715,34 @@ namespace MH
             
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
             glEnableVertexAttribArray(0);
+        }
+        
+        float evaluate_u(int i)
+        {
+            return model_u->get_knot_vector()[i];
+        }
+        
+        float evaluate_v(int j)
+        {
+            return model_v->get_knot_vector()[j];
+        }
+        
+        float u_star(int i)
+        {
+            if ((i + 2) >= knot_u.size())
+            {
+                spdlog::info("{} Boom!", i);
+            }
+            return 0.5 * (evaluate_u(i + 1) + evaluate_u(i + 2));
+        }
+        
+        float v_star(int j)
+        {
+            if ((j + 2) >= knot_v.size())
+            {
+                spdlog::info("{} Boom!", j);
+            }
+            return 0.5 * (evaluate_v(j + 1) + evaluate_v(j + 2));
         }
         
         std::vector<glm::vec3> get_row(int row)

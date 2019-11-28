@@ -319,14 +319,9 @@ namespace MH
             {
                 action = 2;
             }
-            else if (ImGui::MenuItem("Test Surface"))
+            else if (ImGui::MenuItem("Open Surface"))
             {
-                auto test_surfaces = deserialize_surface("surface_c.dat");
-                for(int i = 0; i < test_surfaces.size(); i++)
-                {
-                    auto surface = test_surfaces[i];
-                    group->add_child(surface);
-                }
+                action = 3;
             }
             ImGui::EndMenu();
         }
@@ -393,6 +388,50 @@ namespace MH
                 auto content = serialize(*group);
                 WriteFile(current_path, content);
                
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+                action = -1;
+            }
+            ImGui::EndPopup();
+        }
+        
+        if(action == 3)
+        {
+            ImGui::OpenPopup("Select Surface File");
+        }
+        
+        if (ImGui::BeginPopupModal("Select Surface File"))
+        {
+            ImGui::InputText("File Path", pathBuf, 256);
+            
+            static int READING_OPTION = 0;
+            ImGui::RadioButton("Additive", &READING_OPTION, 0); ImGui::SameLine();
+            ImGui::RadioButton("Clear", &READING_OPTION, 1); ImGui::SameLine();
+            
+            ImGui::NewLine();
+            if (ImGui::Button("OK", ImVec2(120, 0)))
+            {
+                current_path = pathBuf;
+                
+                if(READING_OPTION == 1)
+                {
+                    group->clear();
+                }
+                auto surfaces = deserialize_surface(current_path);
+
+                for(int i = 0; i < surfaces.size(); i++)
+                {
+                    auto surface = surfaces[i];
+                    group->add_child(surface);
+                }
+                
                 ImGui::CloseCurrentPopup();
                 action = -1;
             }
