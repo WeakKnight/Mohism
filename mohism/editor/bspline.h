@@ -498,12 +498,20 @@ namespace MH
         {
             glGenVertexArrays(1, &VAO);
             glGenBuffers(1, &VBO);
+            glGenVertexArrays(1, &NODAL_VAO);
+            glGenBuffers(1, &NODAL_VBO);
+            glGenVertexArrays(1, &KNOT_VAO);
+            glGenBuffers(1, &KNOT_VBO);
         }
         
         ~BSplineSurface()
         {
             glDeleteVertexArrays(1, &VAO);
             glDeleteBuffers(1, &VBO);
+            glDeleteVertexArrays(1, &NODAL_VAO);
+            glDeleteBuffers(1, &NODAL_VBO);
+            glDeleteVertexArrays(1, &KNOT_VAO);
+            glDeleteBuffers(1, &KNOT_VBO);
         }
         
         // m
@@ -524,15 +532,34 @@ namespace MH
             compute_domain();
             compute_model_spline();
             compute_segments();
+            compute_knot_segments();
+            compute_nodal_segments();
             compute_center();
         }
         
         void draw(Shader* shader)
         {
-            glBindVertexArray(VAO);
-            shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
-            glDrawArrays(GL_LINES, 0, segments.size());
-            glBindVertexArray(0);
+            if(general_display)
+            {
+                glBindVertexArray(VAO);
+                shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
+                glDrawArrays(GL_LINES, 0, segments.size());
+                glBindVertexArray(0);
+            }
+            if(nodal_display)
+            {
+                glBindVertexArray(NODAL_VAO);
+                shader->setVec4("customColor", glm::vec4(0.0f, 0.1f, 0.1f, 1.0f));
+                glDrawArrays(GL_LINES, 0, nodal_segments.size());
+                glBindVertexArray(0);
+            }
+            if(knot_display)
+            {
+                glBindVertexArray(KNOT_VAO);
+                shader->setVec4("customColor", glm::vec4(0.3f, 0.7f, 0.52f, 1.0f));
+                glDrawArrays(GL_LINES, 0, knot_segments.size());
+                glBindVertexArray(0);
+            }
         }
         
         std::map<std::pair<float, float>, glm::vec3> evaluateCache;
@@ -582,6 +609,10 @@ namespace MH
         glm::vec3 center;
         glm::mat4 transform = glm::mat4(1.0f);
         
+        bool general_display = true;
+        bool nodal_display = false;
+        bool knot_display = false;
+        
     private:
         
         float blending(int i, int j, float u, float v)
@@ -619,6 +650,11 @@ namespace MH
         
         void compute_domain()
         {
+            left_u = degree_u;
+            right_u = knot_length_u - 1 - degree_u;
+            left_v = degree_v;
+            right_v = knot_length_v - 1 - degree_v;
+            
             domain_u = glm::vec2(knot_u[degree_u], knot_u[knot_length_u - 1 - degree_u]);
             domain_v = glm::vec2(knot_v[degree_v], knot_v[knot_length_v - 1 - degree_v]);
         }
@@ -634,6 +670,103 @@ namespace MH
             model_v->set_degree(degree_v);
             model_v->add_knot_vector(knot_v);
             model_v->calculate_jmax();
+        }
+        
+        void compute_knot_segments()
+        {
+            for(int i = left_u; i <= right_u; i++)
+            {
+                float u = knot_u[i];
+                for(int j = left_v; j < right_v; j++)
+                {
+                    float v = knot_v[j];
+                    float next_v = knot_v[j + 1];
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(u, next_v);
+                    knot_segments.push_back(a);
+                    knot_segments.push_back(b);
+                }
+            }
+            
+            for(int j = left_v; j <= right_v; j++)
+            {
+                float v = knot_v[j];
+                for(int i = left_u; i < right_u; i++)
+                {
+                    float u = knot_u[i];
+                    float next_u = knot_u[i + 1];
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(next_u, v);
+                    knot_segments.push_back(a);
+                    knot_segments.push_back(b);
+                }
+            }
+            
+            for(int i = 0; i < knot_segments.size(); i++)
+            {
+                auto point = knot_segments[i];
+                knot_vertices.push_back(point.x);
+                knot_vertices.push_back(point.y);
+                knot_vertices.push_back(point.z);
+            }
+            
+            glBindVertexArray(KNOT_VAO);
+            
+            glBindBuffer(GL_ARRAY_BUFFER, KNOT_VBO);
+            glBufferData(GL_ARRAY_BUFFER, knot_vertices.size() * sizeof(float), &knot_vertices[0], GL_DYNAMIC_DRAW);
+            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+        }
+        
+        void compute_nodal_segments()
+        {
+            int n = knot_length_v - degree_v - 1 - 1;
+            int m = knot_length_u - degree_u - 1 - 1;
+            
+            for(int i = 0; i <= m; i++)
+            {
+                float u = u_star(i);
+                for(int j = 0; j < n; j++)
+                {
+                    float v = v_star(j);
+                    float next_v = v_star(j + 1);
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(u, next_v);
+                    nodal_segments.push_back(a);
+                    nodal_segments.push_back(b);
+                }
+            }
+            
+            for(int j = 0; j <= n; j++)
+            {
+                float v = v_star(j);
+                for(int i = 0; i < m; i++)
+                {
+                    float u = u_star(i);
+                    float next_u = u_star(i + 1);
+                    glm::vec3 a = evaluate(u, v);
+                    glm::vec3 b = evaluate(next_u, v);
+                    nodal_segments.push_back(a);
+                    nodal_segments.push_back(b);
+                }
+            }
+            
+            for(int i = 0; i < nodal_segments.size(); i++)
+            {
+                auto point = nodal_segments[i];
+                nodal_vertices.push_back(point.x);
+                nodal_vertices.push_back(point.y);
+                nodal_vertices.push_back(point.z);
+            }
+            
+            glBindVertexArray(NODAL_VAO);
+            
+            glBindBuffer(GL_ARRAY_BUFFER, NODAL_VBO);
+            glBufferData(GL_ARRAY_BUFFER, nodal_vertices.size() * sizeof(float), &nodal_vertices[0], GL_DYNAMIC_DRAW);
+            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
         }
         
         void compute_segments(int sub_u = 20, int sub_v = 20)
@@ -774,15 +907,30 @@ namespace MH
         // min max
         glm::vec2 domain_u;
         glm::vec2 domain_v;
+        int left_u;
+        int right_u;
+        int left_v;
+        int right_v;
         
         std::vector<std::shared_ptr<BSpline>> grid_row;
         std::vector<std::shared_ptr<BSpline>> grid_column;
         
         std::vector<glm::vec3> segments;
+        std::vector<glm::vec3> nodal_segments;
+        std::vector<glm::vec3> knot_segments;
+        
         std::vector<float> vertices;
+        std::vector<float> nodal_vertices;
+        std::vector<float> knot_vertices;
         
         unsigned int VAO;
         unsigned int VBO;
+        
+        unsigned int NODAL_VAO;
+        unsigned int NODAL_VBO;
+        
+        unsigned int KNOT_VAO;
+        unsigned int KNOT_VBO;
         
         std::shared_ptr<BSpline> model_u;
         std::shared_ptr<BSpline> model_v;

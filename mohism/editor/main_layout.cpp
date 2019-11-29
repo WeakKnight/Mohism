@@ -167,18 +167,14 @@ namespace MH
                             }
                         }
                     }
-                    if(ImGui::Button("Toggle General Display"))
+                    if(surfaceSelectedIndex != -1)
                     {
-                        
+                        auto surface = group->bspline_surfaces[surfaceSelectedIndex];
+                        ImGui::Checkbox("Toggle General Display", &surface->general_display);
+                        ImGui::Checkbox("Toggle Nodal Display", &surface->nodal_display);
+                        ImGui::Checkbox("Toggle Knot Display", &surface->knot_display);
                     }
-                    if(ImGui::Button("Toggle Nodal Display"))
-                    {
-                        
-                    }
-                    if(ImGui::Button("Toggle Knot Display"))
-                    {
-                        
-                    }
+                    
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Control Point"))
