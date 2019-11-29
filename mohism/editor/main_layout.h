@@ -26,6 +26,8 @@ namespace MH
         int selectedIndex = -1;
         int selectedPointIndex = -1;
         
+        int surfaceSelectedIndex = -1;
+        
         std::string current_path = "";
         
         Shader* defaultShader;

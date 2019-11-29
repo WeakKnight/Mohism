@@ -37,9 +37,13 @@ namespace MH
             camera->process_keyboard(LEFT, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera->process_keyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera->process_keyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera->process_keyboard(BACKWARD, deltaTime);
     }
     
-    void mouse_dragging(double xoffset, double yoffset)
+    void mouse_dragging(double xoffset, double yoffset, std::shared_ptr<BSplineSurface> surface)
     {
 //        xoffset = -xoffset;
         yoffset = - yoffset;
@@ -67,6 +71,18 @@ namespace MH
         front.y = sin(glm::radians(camera->pitch));
         front.z = sin(glm::radians(camera->yaw)) * cos(glm::radians(camera->pitch));
         camera->camera_front = glm::normalize(front);
+        
+        if(camera->orbit)
+        {
+            if(surface != nullptr)
+            {
+                camera->transformation.set_position(surface->center + (-camera->camera_front * camera->orbitDistance));
+            }
+            else
+            {
+                camera->transformation.set_position(-camera->camera_front * camera->orbitDistance);
+            }
+        }
     }
     
     void MainLayout::init()
@@ -117,11 +133,54 @@ namespace MH
                     selectedIndex = curve_index;
                 }
             }
+            
+            for(int surface_index = 0; surface_index < group->bspline_surfaces.size(); surface_index++)
+            {
+                auto surface = group->bspline_surfaces[surface_index];
+                sprintf(label, "Surface #%d", surface_index);
+                if (ImGui::Selectable(label, surfaceSelectedIndex == surface_index))
+                {
+                    surfaceSelectedIndex = surface_index;
+                    camera->surface = surface;
+                }
+            }
+            
             ImGui::EndChild();
             ImGui::SameLine();
             ImGui::BeginChild("mid pane", ImVec2(210, 0), true);
             if (ImGui::BeginTabBar("##Tabs", ImGuiTabBarFlags_None))
             {
+                if (ImGui::BeginTabItem("Surface"))
+                {
+                    if(ImGui::Checkbox("Orbit", &camera->orbit))
+                    {
+                        if(camera->orbit)
+                        {
+                            if(surfaceSelectedIndex != -1)
+                            {
+                                auto surface = group->bspline_surfaces[surfaceSelectedIndex];
+                                camera->orbitDistance = (camera->transformation.get_position() - surface->center).length();
+                            }
+                            else
+                            {
+                                camera->orbitDistance = camera->transformation.get_position().length();
+                            }
+                        }
+                    }
+                    if(ImGui::Button("Toggle General Display"))
+                    {
+                        
+                    }
+                    if(ImGui::Button("Toggle Nodal Display"))
+                    {
+                        
+                    }
+                    if(ImGui::Button("Toggle Knot Display"))
+                    {
+                        
+                    }
+                    ImGui::EndTabItem();
+                }
                 if (ImGui::BeginTabItem("Control Point"))
                 {
                     if(group->get_child_count() > 0 && selectedIndex != -1)
@@ -579,6 +638,12 @@ namespace MH
                 isDragging = false;
             }
             
+//            if(surfaceSelectedIndex != -1)
+//            {
+//                auto surface = group->bspline_surfaces[surfaceSelectedIndex];
+//                ImGuizmo::Manipulate(&view[0][0], &projection[0][0], ImGuizmo::ROTATE, ImGuizmo::WORLD, &surface->transform[0][0]);
+//            }
+            
             if(selectedIndex != -1 && selectedPointIndex != -1)
             {
                 auto child = group->get_child(selectedIndex);
@@ -604,7 +669,15 @@ namespace MH
         if(ImGui::IsMouseDragging(1))
         {
             auto delta = (io.MouseDelta);
-            mouse_dragging(delta.x, delta.y);
+            if(surfaceSelectedIndex != -1)
+            {
+                auto surface = group->bspline_surfaces[surfaceSelectedIndex];
+                mouse_dragging(delta.x, delta.y, surface);
+            }
+            else
+            {
+                mouse_dragging(delta.x, delta.y, nullptr);
+            }
         }
         
         
