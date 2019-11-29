@@ -5,6 +5,8 @@
 #include "glad/glad.h"
 #include "core/log.h"
 #include "shader.h"
+#include <map>
+#include <tuple>
 
 #define OPEN_KNOT_MODIFIED_UNIFORM_VECTOR 1
 #define FLOATING_UNIFORM_VECTOR 2
@@ -340,21 +342,34 @@ namespace MH
             return result;
         }
         
+        std::map<std::tuple<int, int, float>, float> blending_cache;
+        
         float blending_func(int i, int _k, float _t)
         {
+            auto key = std::make_tuple(i, _k, _t);
+            auto it = blending_cache.find(key);
+            if(it != blending_cache.end())
+            {
+                //element found;
+                return it->second;
+            }
+            
             if(_k == 0)
             {
                 if(_t == t(j_max + 1))
                 {
+                    blending_cache[key] = 1;
                     return 1;
                 }
                 
                 if(_t >= t(i) && _t < t(i + 1))
                 {
+                    blending_cache[key] = 1;
                     return 1;
                 }
                 else
                 {
+                    blending_cache[key] = 0;
                     return 0;
                 }
             }
@@ -381,10 +396,12 @@ namespace MH
                         right_result = 0.0f;
                     }
                     
+                    blending_cache[key] = left_result + right_result;
                     return left_result + right_result;
                 }
                 else
                 {
+                    blending_cache[key] = 0;
                     return 0;
                 }
             }
@@ -508,8 +525,17 @@ namespace MH
             glBindVertexArray(0);
         }
         
+        std::map<std::pair<float, float>, glm::vec3> evaluateCache;
+        
         glm::vec3 evaluate(float u, float v)
         {
+            auto key = std::make_pair(u, v);
+            auto it = evaluateCache.find(key);
+            if(it != evaluateCache.end())
+            {
+                return it->second;
+            }
+            
             int n = knot_length_v - degree_v - 1 - 1;
             int m = knot_length_u - degree_u - 1 - 1;
             
@@ -525,6 +551,7 @@ namespace MH
                 }
             }
             
+            evaluateCache[key] = result;
             // return (result / bottom_factor);
             return result;
         }
@@ -659,7 +686,6 @@ namespace MH
                     auto new_control_point = control_point + offset * normal;
                     spdlog::info("{} {} {} {}", new_control_point.x, new_control_point.y, new_control_point.z, new_control_point.w);
                 }
-                spdlog::info("Hello");
             }
             
             float length_u = domain_u.y - domain_u.x;
