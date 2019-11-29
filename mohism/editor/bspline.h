@@ -529,6 +529,19 @@ namespace MH
         
         glm::vec3 evaluate(float u, float v)
         {
+            assert(domain_u.x <= u && u <= domain_u.y);
+            assert(domain_v.x <= v && v <= domain_v.y);
+            
+            if(u == domain_u.y)
+            {
+                u -= 0.0001f;
+            }
+            
+            if(v == domain_v.y)
+            {
+                v -= 0.0001f;
+            }
+            
             auto key = std::make_pair(u, v);
             auto it = evaluateCache.find(key);
             if(it != evaluateCache.end())
@@ -658,36 +671,8 @@ namespace MH
             model_v->calculate_jmax();
         }
         
-        void compute_segments(int sub_u = 150, int sub_v = 150)
+        void compute_segments(int sub_u = 10, int sub_v = 10)
         {
-            // computer u star v star using surface
-            int n = knot_length_v - degree_v - 1 - 1;
-            int m = knot_length_u - degree_u - 1 - 1;
-            spdlog::info("n:{} m:{}", n, m);
-            for(int i = 0; i <= m - 1; i++)
-            {
-                for(int j = 0; j <= n - 1; j++)
-                {
-                    auto sth = evaluate(u_star(i), v_star(j));
-                    auto control_point = P(i, j);
-//                    spdlog::info("control_point x:{} y:{} z:{}", control_point.x, control_point.y, control_point.z);
-                    glm::vec4 normal;
-                    if(sth.z < 2.0f)
-                    {
-                        normal = glm::vec4(sth.x, sth.y, 0.0f, 0.0);
-//                        spdlog::info("normal point x:{} y:{} z:{}", sth.x, sth.y, 0.0f);
-                    }
-                    else
-                    {
-                        normal = glm::vec4(sth.x, sth.y, sth.z - 2.0f, 0.0);
-//                        spdlog::info("normal point x:{} y:{} z:{}", sth.x, sth.y, sth.z - 2.0f);
-                    }
-                    float offset = 1.0;
-                    auto new_control_point = control_point + offset * normal;
-                    spdlog::info("{} {} {} {}", new_control_point.x, new_control_point.y, new_control_point.z, new_control_point.w);
-                }
-            }
-            
             float length_u = domain_u.y - domain_u.x;
             float step_u = length_u / (float)sub_u;
             
@@ -697,14 +682,15 @@ namespace MH
             for(int step_index_u = 0; step_index_u <= sub_u; step_index_u++)
             {
                 float u = domain_u.x + step_u * step_index_u;
+
                 for(int step_index_v = 0; step_index_v < sub_v; step_index_v++)
                 {
                     float v = domain_v.x + step_v * step_index_v;
                     float next_v = domain_v.x + step_v * (step_index_v + 1);
-                    
+
                     glm::vec3 a = evaluate(u, v);
                     glm::vec3 b = evaluate(u, next_v);
-                    
+
                     segments.push_back(a);
                     segments.push_back(b);
                 }
@@ -713,6 +699,7 @@ namespace MH
             for(int step_index_v = 0; step_index_v <= sub_v; step_index_v++)
             {
                 float v = domain_v.x + step_v * step_index_v;
+                
                 for(int step_index_u = 0; step_index_u < sub_u; step_index_u++)
                 {
                     float u = domain_u.x + step_u * step_index_u;
