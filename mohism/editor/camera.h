@@ -46,7 +46,7 @@ namespace MH
             }
             else
             {
-                projection = glm::perspective(glm::radians(fov), width / height, 0.1f, 100.0f);
+                projection = glm::perspective(glm::radians(fov), width / height, 0.1f, 10000.0f);
             }
         }
 
@@ -148,7 +148,7 @@ namespace MH
                         fov = 1.0f;
                     if (fov >= 45.0f)
                         fov = 45.0f;
-                    projection = glm::perspective(glm::radians(fov), width / height, 0.1f, 100.0f);
+                    projection = glm::perspective(glm::radians(fov), width / height, 0.1f, 10000.0f);
                 }
             }
         }

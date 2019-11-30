@@ -356,6 +356,7 @@ namespace MH
         
         std::map<std::tuple<int, int, float>, float> blending_cache;
         
+    public:
         float blending_func(int i, int _k, float _t)
         {
             auto key = std::make_tuple(i, _k, _t);
@@ -419,9 +420,9 @@ namespace MH
             }
         }
         
-        bool show_polygon= true;
+        bool show_polygon= false;
         bool show_curve = true;
-        bool show_control_point = true;
+        bool show_control_point = false;
         bool is_special_color = false;
         
     private:
@@ -520,12 +521,70 @@ namespace MH
         std::vector<float> knot_v;
         // m x n
         std::vector<glm::vec4> control_points;
+        std::vector<glm::vec3> grid_points;
+        
+        std::vector<std::shared_ptr<BSpline>> nodal_curves;
+        
+        float sourceMatrix[50][50] = {};
+        float destMatrix[50][50] = {};
         
         int degree_u;
         int degree_v;
         
         int knot_length_u;
         int knot_length_v;
+        
+        float get_nodal_blending_u(int i, int nodal_index)
+        {
+            float ustarVal = u_star(nodal_index);
+            if(ustarVal >= domain_u.y)
+            {
+                ustarVal = domain_u.y - 0.0001f;
+            }
+            return model_u->blending_func(i, degree_u, ustarVal);
+        }
+        
+        float get_nodal_blending_v(int i, int nodal_index)
+        {
+            float vstarVal = v_star(nodal_index);
+            if(vstarVal >= domain_v.y)
+            {
+                vstarVal = domain_v.y - 0.0001f;
+            }
+            return model_v->blending_func(i, degree_v, vstarVal);
+        }
+        
+        void compute_domain()
+        {
+            left_u = degree_u;
+            right_u = knot_length_u - 1 - degree_u;
+            left_v = degree_v;
+            right_v = knot_length_v - 1 - degree_v;
+            
+            domain_u = glm::vec2(knot_u[degree_u], knot_u[knot_length_u - 1 - degree_u]);
+            domain_v = glm::vec2(knot_v[degree_v], knot_v[knot_length_v - 1 - degree_v]);
+        }
+        
+        void compute_model_spline()
+        {
+            model_u = std::make_shared<BSpline>();
+            model_u->set_degree(degree_u);
+            model_u->add_knot_vector(knot_u);
+            model_u->calculate_jmax();
+            
+            model_v = std::make_shared<BSpline>();
+            model_v->set_degree(degree_v);
+            model_v->add_knot_vector(knot_v);
+            model_v->calculate_jmax();
+        }
+        
+        void compute_derived_data_for_nodal()
+        {
+            compute_segments();
+            compute_knot_segments();
+            compute_nodal_segments();
+            compute_center();
+        }
         
         void compute_derived_date()
         {
@@ -539,26 +598,61 @@ namespace MH
         
         void draw(Shader* shader)
         {
-            if(general_display)
+            if(ForNodal)
             {
-                glBindVertexArray(VAO);
-                shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
-                glDrawArrays(GL_LINES, 0, segments.size());
-                glBindVertexArray(0);
+                if(nodal_curvedisplay)
+                {
+                    for(int i = 0; i < nodal_curves.size(); i++)
+                    {
+                        auto curve = nodal_curves[i];
+                        curve->draw(shader);
+                    }
+                }
+                if(general_display)
+                {
+                    glBindVertexArray(VAO);
+                    shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, segments.size());
+                    glBindVertexArray(0);
+                }
+                if(nodal_display)
+                {
+                    glBindVertexArray(NODAL_VAO);
+                    shader->setVec4("customColor", glm::vec4(0.0f, 0.1f, 0.1f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, nodal_segments.size());
+                    glBindVertexArray(0);
+                }
+                if(knot_display)
+                {
+                    glBindVertexArray(KNOT_VAO);
+                    shader->setVec4("customColor", glm::vec4(0.3f, 0.7f, 0.52f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, knot_segments.size());
+                    glBindVertexArray(0);
+                }
             }
-            if(nodal_display)
+            else
             {
-                glBindVertexArray(NODAL_VAO);
-                shader->setVec4("customColor", glm::vec4(0.0f, 0.1f, 0.1f, 1.0f));
-                glDrawArrays(GL_LINES, 0, nodal_segments.size());
-                glBindVertexArray(0);
-            }
-            if(knot_display)
-            {
-                glBindVertexArray(KNOT_VAO);
-                shader->setVec4("customColor", glm::vec4(0.3f, 0.7f, 0.52f, 1.0f));
-                glDrawArrays(GL_LINES, 0, knot_segments.size());
-                glBindVertexArray(0);
+                if(general_display)
+                {
+                    glBindVertexArray(VAO);
+                    shader->setVec4("customColor", glm::vec4(0.3f, 0.4f, 0.52f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, segments.size());
+                    glBindVertexArray(0);
+                }
+                if(nodal_display)
+                {
+                    glBindVertexArray(NODAL_VAO);
+                    shader->setVec4("customColor", glm::vec4(0.0f, 0.1f, 0.1f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, nodal_segments.size());
+                    glBindVertexArray(0);
+                }
+                if(knot_display)
+                {
+                    glBindVertexArray(KNOT_VAO);
+                    shader->setVec4("customColor", glm::vec4(0.3f, 0.7f, 0.52f, 1.0f));
+                    glDrawArrays(GL_LINES, 0, knot_segments.size());
+                    glBindVertexArray(0);
+                }
             }
         }
         
@@ -612,6 +706,9 @@ namespace MH
         bool general_display = true;
         bool nodal_display = false;
         bool knot_display = false;
+        bool nodal_curvedisplay = true;
+        
+        bool ForNodal = false;
         
     private:
         
@@ -646,30 +743,6 @@ namespace MH
             int width = n + 1;
             
             return control_points[width * i + j];
-        }
-        
-        void compute_domain()
-        {
-            left_u = degree_u;
-            right_u = knot_length_u - 1 - degree_u;
-            left_v = degree_v;
-            right_v = knot_length_v - 1 - degree_v;
-            
-            domain_u = glm::vec2(knot_u[degree_u], knot_u[knot_length_u - 1 - degree_u]);
-            domain_v = glm::vec2(knot_v[degree_v], knot_v[knot_length_v - 1 - degree_v]);
-        }
-        
-        void compute_model_spline()
-        {
-            model_u = std::make_shared<BSpline>();
-            model_u->set_degree(degree_u);
-            model_u->add_knot_vector(knot_u);
-            model_u->calculate_jmax();
-            
-            model_v = std::make_shared<BSpline>();
-            model_v->set_degree(degree_v);
-            model_v->add_knot_vector(knot_v);
-            model_v->calculate_jmax();
         }
         
         void compute_knot_segments()
@@ -911,9 +984,6 @@ namespace MH
         int right_u;
         int left_v;
         int right_v;
-        
-        std::vector<std::shared_ptr<BSpline>> grid_row;
-        std::vector<std::shared_ptr<BSpline>> grid_column;
         
         std::vector<glm::vec3> segments;
         std::vector<glm::vec3> nodal_segments;

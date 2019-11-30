@@ -7,6 +7,7 @@
 #include "serializer.h"
 #include "ImGuizmo.h"
 #include "imgui.h"
+#include "matrix.h"
 
 namespace MH
 {
@@ -102,7 +103,7 @@ namespace MH
     }
     
     void MainLayout::on_inspector()
-    {
+    {        
         static ImGuiWindowFlags toolboxFlag =  ImGuiWindowFlags_None;
         static bool* toolboxOpen = nullptr;
         
@@ -172,6 +173,10 @@ namespace MH
                         auto surface = group->bspline_surfaces[surfaceSelectedIndex];
                         ImGui::Checkbox("Toggle General Display", &surface->general_display);
                         ImGui::Checkbox("Toggle Nodal Display", &surface->nodal_display);
+                        if(surface->ForNodal)
+                        {
+                            ImGui::Checkbox("Toggle Nodal Curve Display", &surface->nodal_curvedisplay);
+                        }
                         ImGui::Checkbox("Toggle Knot Display", &surface->knot_display);
                     }
                     
@@ -470,6 +475,10 @@ namespace MH
             ImGui::RadioButton("Additive", &READING_OPTION, 0); ImGui::SameLine();
             ImGui::RadioButton("Clear", &READING_OPTION, 1); ImGui::SameLine();
             
+            static int FILE_OPTION = 0;
+            ImGui::RadioButton("Surface", &FILE_OPTION, 0); ImGui::SameLine();
+            ImGui::RadioButton("Nodal", &FILE_OPTION, 1); ImGui::SameLine();
+            
             ImGui::NewLine();
             if (ImGui::Button("OK", ImVec2(120, 0)))
             {
@@ -479,12 +488,30 @@ namespace MH
                 {
                     group->clear();
                 }
-                auto surfaces = deserialize_surface(current_path);
-
-                for(int i = 0; i < surfaces.size(); i++)
+                
+                if(FILE_OPTION == 0)
                 {
-                    auto surface = surfaces[i];
-                    group->add_child(surface);
+                    auto surfaces = deserialize_surface(current_path);
+
+                    for(int i = 0; i < surfaces.size(); i++)
+                    {
+                        auto surface = surfaces[i];
+                        group->add_child(surface);
+                    }
+                }
+                else if(FILE_OPTION == 1)
+                {
+                    auto surfaces = deserialize_nodal(current_path);
+                    
+                    for(int i = 0; i < surfaces.size(); i++)
+                    {
+                        auto surface = surfaces[i];
+                        group->add_child(surface);
+                    }
+                }
+                else
+                {
+                    assert(true);
                 }
                 
                 ImGui::CloseCurrentPopup();
