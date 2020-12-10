@@ -1,8 +1,5 @@
 #pragma once
 
-#include "log.h"
-#include "application.h"
-
 #ifdef MH_PLATFORM_WINDOWS
 int main(int argc, char const *argv[])
 {
@@ -13,15 +10,13 @@ int main(int argc, char const *argv[])
 
 #ifdef MH_PLATFORM_MACOS
 
-extern MH::Application* MH::create_application();
+extern void game_initialize();
+
+//void engine_entry();
 
 int main(int argc, char const *argv[])
 {
-    MH::Log::init();
-    MH::Log::get_core_logger()->warn("Logger Initialized");
-    
-    MH::Application* app = MH::create_application();
-    app->run();
+    game_initialize();
     return 0;
 }
 #endif

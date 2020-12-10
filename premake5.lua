@@ -1,6 +1,6 @@
 workspace "mohism"
     location "build"
-    architecture "x64"
+    architecture "arm64"
     startproject "sandbox"
 
     configurations
@@ -13,8 +13,6 @@ workspace "mohism"
 outputdir = "%{cfg.system}-%{cfg.buildcfg}"
 
 include "3rdparty/glfw"
-include "3rdparty/glad"
-include "3rdparty/imgui"
 
 project "mohism"
     location "build"
@@ -31,17 +29,13 @@ project "mohism"
     {
         "mohism/**.h",
         "mohism/**.cpp",
-        "3rdparty/glm/glm/**.hpp",
-        "3rdparty/glm/glm/**.inl",
+        "mohism/**.c",
+        "mohism/**.m",
     }
 
     includedirs
     {
-        "3rdparty/spdlog/include",
         "3rdparty/glfw/include",
-        "3rdparty/glad/include",
-        "3rdparty/imgui",
-        "3rdparty/glm",
         "mohism/"
     }
 
@@ -59,9 +53,7 @@ project "mohism"
         links 
         {
             --"libiconv",
-            "imgui",
             "glfw",
-            "glad",
             "ForceFeedback.framework",
             "AudioToolbox.framework",
             "CoreAudio.framework",
@@ -69,8 +61,9 @@ project "mohism"
             "IOKit.framework",
             "Carbon.framework",
             "Cocoa.framework",
-            "OpenGL.framework",
             "CoreFoundation.framework",
+            "QuartzCore.framework",
+            "Metal.framework"
         }
 
         buildoptions 
@@ -102,12 +95,12 @@ project "sandbox"
     files
     {
         "sandbox/**.h",
-        "sandbox/**.cpp"
+        "sandbox/**.cpp",
+        "sandbox/**.c"
     }
 
     includedirs
     {
-        "3rdparty/spdlog/include",
         "mohism/"
     }
 

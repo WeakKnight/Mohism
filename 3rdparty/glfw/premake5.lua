@@ -1,6 +1,7 @@
 
 project "glfw"
 kind "StaticLib"
+architecture "arm64"
 language "C"
 
 targetdir ("bin/" .. outputdir .. "/%{prj.name}")
