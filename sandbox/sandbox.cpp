@@ -1,8 +1,41 @@
 #include "mohism.h"
 
-void game_initialize()
+class TestLayer: public MH::Layer
 {
-    return;
+    public:
+        TestLayer()
+        : Layer("Test")
+        {
+        }
+
+        void on_update() override
+        {
+            LOG_INFO("Test Layer Updated");
+        }
+
+        void on_event(MH::Event& event) override
+        {
+            LOG_INFO("{0}", event.to_string());
+        }
+};
+
+class Sandbox: public MH::Application
+{
+public:
+    Sandbox()
+    {
+//        push_layer(new TestLayer());
+    }
+    ~Sandbox()
+    {
+
+    }
+private:
+};
+
+MH::Application* MH::create_application()
+{
+    return new Sandbox();
 }
 
 
